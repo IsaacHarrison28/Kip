@@ -2,13 +2,22 @@ import { Router } from "express";
 import { supabase } from "../lib/supabase.js";
 import { hashUrl, isValidUrl, normalizeUrl } from "../lib/url.js";
 import { scrapeQueue } from "../lib/queue.js";
+import { requireAuth } from "../middleware/auth.js";
 
 export const bookmarksRouter = Router();
 
-bookmarksRouter.get("/", async (_req, res) => {
+// All bookmark routes require authentication
+bookmarksRouter.use(requireAuth);
+
+/**
+ * GET /api/bookmarks
+ * List the authenticated user's bookmarks.
+ */
+bookmarksRouter.get("/", async (req, res) => {
   const { data, error } = await supabase
     .from("bookmarks")
     .select("*")
+    .eq("user_id", req.userId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -19,6 +28,9 @@ bookmarksRouter.get("/", async (_req, res) => {
   return res.json({ bookmarks: data });
 });
 
+/**
+ * POST /api/bookmarks
+ */
 bookmarksRouter.post("/", async (req, res) => {
   const { url } = req.body as { url?: string };
 
@@ -33,9 +45,11 @@ bookmarksRouter.post("/", async (req, res) => {
   const normalized = normalizeUrl(url);
   const urlHash = hashUrl(normalized);
 
+  // Dedupe within this user
   const { data: existing } = await supabase
     .from("bookmarks")
     .select("id")
+    .eq("user_id", req.userId)
     .eq("url_hash", urlHash)
     .maybeSingle();
 
@@ -48,6 +62,7 @@ bookmarksRouter.post("/", async (req, res) => {
   const { data, error } = await supabase
     .from("bookmarks")
     .insert({
+      user_id: req.userId,
       url: normalized,
       url_hash: urlHash,
       title: tempTitle,
@@ -61,7 +76,6 @@ bookmarksRouter.post("/", async (req, res) => {
     return res.status(500).json({ error: "Failed to save bookmark" });
   }
 
-  // Enqueue the scrape job
   try {
     await scrapeQueue.add("scrape", {
       bookmarkId: data.id,
@@ -69,16 +83,22 @@ bookmarksRouter.post("/", async (req, res) => {
     });
   } catch (e) {
     console.error("Failed to enqueue scrape job:", e);
-    // Don't fail the request — the bookmark is saved, just unenriched
   }
 
   return res.status(201).json({ bookmark: data });
 });
 
+/**
+ * DELETE /api/bookmarks/:id
+ */
 bookmarksRouter.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
-  const { error } = await supabase.from("bookmarks").delete().eq("id", id);
+  const { error } = await supabase
+    .from("bookmarks")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", req.userId);
 
   if (error) {
     console.error(error);
