@@ -23,17 +23,31 @@ export function BookmarkCard({
   return (
     <article className="kip-card kip-card-hover group relative overflow-hidden">
       {/* Thumbnail area */}
-      <div className="relative aspect-video w-full bg-brand-50">
+      <div className="relative aspect-video w-full bg-gradient-to-br from-brand-50 to-brand-100">
         {bookmark.thumbnail_url ? (
           <img
             src={bookmark.thumbnail_url}
             alt=""
             className="h-full w-full object-cover"
             loading="lazy"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <BookmarkIcon className="h-8 w-8 text-electric/40" />
+            {bookmark.favicon_url ? (
+              <img
+                src={bookmark.favicon_url}
+                alt=""
+                className="h-8 w-8 rounded"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : (
+              <BookmarkIcon className="h-8 w-8 text-electric/40" />
+            )}
           </div>
         )}
 

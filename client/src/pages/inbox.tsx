@@ -6,6 +6,7 @@ import { Footer } from "@/components/footer";
 import { BookmarkCard } from "@/components/bookmark-card";
 import { AddBookmarkModal } from "@/components/add-bookmark-modal";
 import { api, type Bookmark } from "@/lib/api";
+import { subscribeToBookmarks } from "@/lib/realtime";
 
 export function InboxPage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -27,6 +28,15 @@ export function InboxPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const unsubscribe = subscribeToBookmarks((updated) => {
+      setBookmarks((prev) =>
+        prev.map((b) => (b.id === updated.id ? updated : b))
+      );
+    });
+    return unsubscribe;
+  }, []);
+
   async function handleDelete(id: string) {
     const prev = bookmarks;
     setBookmarks((b) => b.filter((x) => x.id !== id));
@@ -34,7 +44,7 @@ export function InboxPage() {
       await api.deleteBookmark(id);
     } catch (e) {
       console.error(e);
-      setBookmarks(prev); // rollback
+      setBookmarks(prev);
     }
   }
 
