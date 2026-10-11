@@ -1,13 +1,10 @@
 import { Router } from "express";
 import { supabase } from "../lib/supabase.js";
 import { hashUrl, isValidUrl, normalizeUrl } from "../lib/url.js";
+import { scrapeQueue } from "../lib/queue.js";
 
 export const bookmarksRouter = Router();
 
-/**
- * GET /api/bookmarks
- * List all bookmarks, newest first.
- */
 bookmarksRouter.get("/", async (_req, res) => {
   const { data, error } = await supabase
     .from("bookmarks")
@@ -22,10 +19,6 @@ bookmarksRouter.get("/", async (_req, res) => {
   return res.json({ bookmarks: data });
 });
 
-/**
- * POST /api/bookmarks
- * Save a URL. Returns the created bookmark with status: 'pending'.
- */
 bookmarksRouter.post("/", async (req, res) => {
   const { url } = req.body as { url?: string };
 
@@ -40,7 +33,6 @@ bookmarksRouter.post("/", async (req, res) => {
   const normalized = normalizeUrl(url);
   const urlHash = hashUrl(normalized);
 
-  // Dedupe check
   const { data: existing } = await supabase
     .from("bookmarks")
     .select("id")
@@ -51,7 +43,6 @@ bookmarksRouter.post("/", async (req, res) => {
     return res.status(409).json({ error: "Already saved" });
   }
 
-  // Insert with a temporary title = hostname
   const tempTitle = new URL(normalized).hostname.replace(/^www\./, "");
 
   const { data, error } = await supabase
@@ -70,14 +61,20 @@ bookmarksRouter.post("/", async (req, res) => {
     return res.status(500).json({ error: "Failed to save bookmark" });
   }
 
-  // Slice 2: enqueue a scraping job here
+  // Enqueue the scrape job
+  try {
+    await scrapeQueue.add("scrape", {
+      bookmarkId: data.id,
+      url: data.url,
+    });
+  } catch (e) {
+    console.error("Failed to enqueue scrape job:", e);
+    // Don't fail the request — the bookmark is saved, just unenriched
+  }
 
   return res.status(201).json({ bookmark: data });
 });
 
-/**
- * DELETE /api/bookmarks/:id
- */
 bookmarksRouter.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
