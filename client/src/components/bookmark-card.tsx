@@ -28,17 +28,30 @@ export function BookmarkCard({
     });
 
   const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      }
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
+
+  function openLink() {
+    if (isDragging) return; // don't open if we just finished a drag
+    window.open(bookmark.url, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <article
       ref={setNodeRef}
       style={style}
+      onClick={openLink}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openLink();
+        }
+      }}
+      role="link"
+      tabIndex={0}
+      aria-label={`Open ${bookmark.title ?? bookmark.url}`}
       className={cn(
-        "kip-card kip-card-hover group relative overflow-hidden",
+        "kip-card kip-card-hover group relative cursor-pointer overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2",
         isDragging && "z-50 opacity-50 shadow-kip-hover"
       )}
     >
@@ -46,6 +59,7 @@ export function BookmarkCard({
       <button
         {...listeners}
         {...attributes}
+        onClick={(e) => e.stopPropagation()}
         className="absolute left-2 top-2 z-10 cursor-grab rounded-kip-sm bg-white/90 p-1 text-navy/40 opacity-0 shadow-kip-card backdrop-blur-sm transition-opacity hover:text-navy active:cursor-grabbing group-hover:opacity-100"
         aria-label="Drag to move"
       >
@@ -128,7 +142,10 @@ export function BookmarkCard({
 
       {/* Delete button */}
       <button
-        onClick={() => onDelete(bookmark.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(bookmark.id);
+        }}
         className="absolute right-2 top-2 rounded-kip-sm bg-white/90 p-1.5 text-navy/50 opacity-0 shadow-kip-card backdrop-blur-sm transition-opacity hover:text-danger group-hover:opacity-100"
         aria-label="Delete bookmark"
       >
