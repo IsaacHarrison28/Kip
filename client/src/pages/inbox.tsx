@@ -4,7 +4,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from "@dnd-kit/core";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
@@ -15,11 +14,10 @@ import { AddBookmarkModal } from "@/components/add-bookmark-modal";
 import { api, type Bookmark } from "@/lib/api";
 import { subscribeToBookmarks } from "@/lib/realtime";
 import { useAuth } from "@/lib/auth-context";
-import { useFolders } from "@/lib/folders-context";
+import { useDndMove } from "@/lib/use-dnd-move";
 
 export function InboxPage() {
   const { user } = useAuth();
-  const { incrementCount } = useFolders();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -30,7 +28,7 @@ export function InboxPage() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.listBookmarks("none"); // only Inbox
+      const data = await api.listBookmarks("none");
       setBookmarks(data);
     } catch (e) {
       console.error(e);
@@ -46,7 +44,6 @@ export function InboxPage() {
   useEffect(() => {
     if (!user) return;
     const unsubscribe = subscribeToBookmarks(user.id, (updated) => {
-      // Only handle bookmarks that belong in the Inbox
       if (updated.folder_id === null) {
         setBookmarks((prev) => {
           const exists = prev.find((b) => b.id === updated.id);
@@ -73,41 +70,25 @@ export function InboxPage() {
     }
   }
 
-  async function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over) return;
+  const removeFromView = useCallback((id: string) => {
+    setBookmarks((prev) => prev.filter((b) => b.id !== id));
+  }, []);
 
-    const bookmarkId = String(active.id);
-    const targetFolderId = String(over.id); // "inbox" or a folder uuid
+  const restoreToView = useCallback((bookmark: Bookmark, index: number) => {
+    setBookmarks((prev) => {
+      const next = [...prev];
+      next.splice(index, 0, bookmark);
+      return next;
+    });
+  }, []);
 
-    const bookmark = bookmarks.find((b) => b.id === bookmarkId);
-    if (!bookmark) return;
-
-    // If dropped on Inbox, do nothing (already there)
-    if (targetFolderId === "inbox") return;
-
-    // Optimistic move
-    const prev = bookmarks;
-    setBookmarks((b) => b.filter((x) => x.id !== bookmarkId));
-    incrementCount(null, -1);
-    incrementCount(targetFolderId, +1);
-
-    try {
-      await api.moveBookmark(bookmarkId, targetFolderId);
-    } catch (e) {
-      console.error(e);
-      // rollback
-      setBookmarks(prev);
-      incrementCount(null, +1);
-      incrementCount(targetFolderId, -1);
-    }
-  }
+  const { onDragEnd } = useDndMove(bookmarks, removeFromView, restoreToView);
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header onSaveClick={() => setModalOpen(true)} />
 
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <div className="flex flex-1">
           <Sidebar />
 

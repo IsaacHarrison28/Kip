@@ -1,5 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Navigate } from "react-router-dom";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
 import { Footer } from "@/components/footer";
@@ -10,6 +16,7 @@ import { api, type Bookmark } from "@/lib/api";
 import { subscribeToBookmarks } from "@/lib/realtime";
 import { useAuth } from "@/lib/auth-context";
 import { useFolders } from "@/lib/folders-context";
+import { useDndMove } from "@/lib/use-dnd-move";
 
 export function FolderPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +25,10 @@ export function FolderPage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   const folder = folders.find((f) => f.id === id);
 
@@ -39,9 +50,8 @@ export function FolderPage() {
   }, [load]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !id) return;
     const unsubscribe = subscribeToBookmarks(user.id, (updated) => {
-      // If the updated bookmark now belongs to this folder, add it
       if (updated.folder_id === id) {
         setBookmarks((prev) => {
           const exists = prev.find((b) => b.id === updated.id);
@@ -51,7 +61,6 @@ export function FolderPage() {
           return [updated, ...prev];
         });
       } else {
-        // It moved out of this folder — remove it
         setBookmarks((prev) => prev.filter((b) => b.id !== updated.id));
       }
     });
@@ -69,6 +78,20 @@ export function FolderPage() {
     }
   }
 
+  const removeFromView = useCallback((bookmarkId: string) => {
+    setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkId));
+  }, []);
+
+  const restoreToView = useCallback((bookmark: Bookmark, index: number) => {
+    setBookmarks((prev) => {
+      const next = [...prev];
+      next.splice(index, 0, bookmark);
+      return next;
+    });
+  }, []);
+
+  const { onDragEnd } = useDndMove(bookmarks, removeFromView, restoreToView);
+
   if (!folder && !loading) {
     return <Navigate to="/" replace />;
   }
@@ -77,49 +100,51 @@ export function FolderPage() {
     <div className="flex min-h-screen flex-col">
       <Header onSaveClick={() => setModalOpen(true)} />
 
-      <div className="flex flex-1">
-        <Sidebar />
+      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+        <div className="flex flex-1">
+          <Sidebar />
 
-        <main className="flex-1">
-          <div className="mx-auto max-w-5xl px-6 py-8">
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-navy">
-                  {folder?.name ?? "Folder"}
-                </h1>
-                <p className="mt-1 text-sm text-navy/60">
-                  {bookmarks.length} bookmark
-                  {bookmarks.length === 1 ? "" : "s"}
-                </p>
+          <main className="flex-1">
+            <div className="mx-auto max-w-5xl px-6 py-8">
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight text-navy">
+                    {folder?.name ?? "Folder"}
+                  </h1>
+                  <p className="mt-1 text-sm text-navy/60">
+                    {bookmarks.length} bookmark
+                    {bookmarks.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <span className="kip-tag">{bookmarks.length} saved</span>
               </div>
-              <span className="kip-tag">{bookmarks.length} saved</span>
+
+              {loading ? (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="kip-card h-64 animate-pulse bg-brand-50/50"
+                    />
+                  ))}
+                </div>
+              ) : bookmarks.length === 0 ? (
+                <EmptyState onSaveClick={() => setModalOpen(true)} />
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {bookmarks.map((b) => (
+                    <BookmarkCard
+                      key={b.id}
+                      bookmark={b}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-
-            {loading ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="kip-card h-64 animate-pulse bg-brand-50/50"
-                  />
-                ))}
-              </div>
-            ) : bookmarks.length === 0 ? (
-              <EmptyState onSaveClick={() => setModalOpen(true)} />
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {bookmarks.map((b) => (
-                  <BookmarkCard
-                    key={b.id}
-                    bookmark={b}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </main>
-      </div>
+          </main>
+        </div>
+      </DndContext>
 
       <Footer />
 

@@ -1,22 +1,16 @@
 import { useState, useRef, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import {
-  Plus,
-  Inbox as InboxIcon,
-  Trash2,
-  Pencil,
-  Check,
-  X,
-} from "lucide-react";
+import { NavLink } from "react-router-dom";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import { useFolders } from "@/lib/folders-context";
+import { useToast } from "@/lib/toast-context";
 import { getFolderIcon } from "@/lib/folder-icons";
 import { cn } from "@/lib/utils";
-import type { Folder } from "@/lib/api";
 
 export function Sidebar() {
   const { folders, inboxCount, createFolder, updateFolder, deleteFolder } =
     useFolders();
+  const { push } = useToast();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -29,10 +23,30 @@ export function Sidebar() {
     }
     try {
       await createFolder(name);
+      push(`Folder "${name}" created.`, "success");
       setNewName("");
       setCreating(false);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to create folder");
+      push(e instanceof Error ? e.message : "Failed to create folder", "error");
+      // Keep input open so user can retry
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    try {
+      await deleteFolder(id);
+      push(`Folder "${name}" deleted. Bookmarks moved to Inbox.`, "info");
+    } catch (e) {
+      push(e instanceof Error ? e.message : "Failed to delete folder", "error");
+    }
+  }
+
+  async function handleRename(id: string, name: string) {
+    try {
+      await updateFolder(id, { name });
+      push(`Folder renamed to "${name}".`, "success");
+    } catch (e) {
+      push(e instanceof Error ? e.message : "Failed to rename folder", "error");
     }
   }
 
@@ -50,44 +64,31 @@ export function Sidebar() {
           </button>
         </div>
 
-        {/* Inbox (special — bookmarks with folder_id = null) */}
         <FolderRow
-          id="inbox"
           to="/"
           name="Inbox"
           icon="inbox"
-          color="#0b6bf2"
           count={inboxCount}
           droppableId="inbox"
           deletable={false}
         />
 
-        {/* Custom folders */}
         {folders
           .filter((f) => f.name !== "Inbox")
           .map((folder) => (
             <FolderRow
               key={folder.id}
-              id={folder.id}
               to={`/folder/${folder.id}`}
               name={folder.name}
               icon={folder.icon}
-              color={folder.color}
               count={folder.count ?? 0}
               droppableId={folder.id}
               deletable
-              onRename={(name) => updateFolder(folder.id, { name })}
-              onDelete={() => {
-                if (
-                  confirm(`Delete "${folder.name}"? Bookmarks move to Inbox.`)
-                ) {
-                  deleteFolder(folder.id);
-                }
-              }}
+              onRename={(name) => handleRename(folder.id, name)}
+              onDelete={() => handleDelete(folder.id, folder.name)}
             />
           ))}
 
-        {/* New folder input */}
         {creating && (
           <div className="flex items-center gap-1.5 px-3 py-2">
             <input
@@ -113,7 +114,6 @@ export function Sidebar() {
 }
 
 function FolderRow({
-  id,
   to,
   name,
   icon,
@@ -123,11 +123,10 @@ function FolderRow({
   onRename,
   onDelete,
 }: {
-  id: string;
   to: string;
   name: string;
   icon: string;
-  color: string;
+  color?: string;
   count: number;
   droppableId: string;
   deletable: boolean;
@@ -139,7 +138,6 @@ function FolderRow({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
   const inputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (editing) {

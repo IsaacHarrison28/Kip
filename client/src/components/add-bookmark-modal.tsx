@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Link2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useToast } from "@/lib/toast-context";
 
 export function AddBookmarkModal({
   open,
@@ -11,6 +12,7 @@ export function AddBookmarkModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { push } = useToast();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,10 +43,13 @@ export function AddBookmarkModal({
 
     try {
       await api.createBookmark(value);
+      push("Link saved. Filing it under Inbox.", "success");
       onSaved();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      setError(msg);
+      push(msg, "error");
     } finally {
       setLoading(false);
     }
