@@ -44,17 +44,28 @@ export function InboxPage() {
   useEffect(() => {
     if (!user) return;
     const unsubscribe = subscribeToBookmarks(user.id, (updated) => {
-      if (updated.folder_id === null) {
-        setBookmarks((prev) => {
-          const exists = prev.find((b) => b.id === updated.id);
-          if (exists) {
-            return prev.map((b) => (b.id === updated.id ? updated : b));
+      setBookmarks((prev) => {
+        const existing = prev.find((b) => b.id === updated.id);
+
+        if (!existing) {
+          if (updated.folder_id === null) {
+            return [updated, ...prev];
           }
-          return [updated, ...prev];
-        });
-      } else {
-        setBookmarks((prev) => prev.filter((b) => b.id !== updated.id));
-      }
+          return prev;
+        }
+
+        const folderChanged = existing.folder_id !== updated.folder_id;
+
+        if (!folderChanged) {
+          return prev.map((b) => (b.id === updated.id ? updated : b));
+        }
+
+        if (updated.folder_id === null) {
+          return prev.map((b) => (b.id === updated.id ? updated : b));
+        } else {
+          return prev.filter((b) => b.id !== updated.id);
+        }
+      });
     });
     return unsubscribe;
   }, [user]);
