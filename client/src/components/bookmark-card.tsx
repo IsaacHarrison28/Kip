@@ -1,4 +1,5 @@
-import { Bookmark as BookmarkIcon, Trash2 } from "lucide-react";
+import { Bookmark as BookmarkIcon, Trash2, GripVertical } from "lucide-react";
+import { useDraggable } from "@dnd-kit/core";
 import type { Bookmark } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -20,8 +21,37 @@ export function BookmarkCard({
   const isPending = bookmark.status === "pending";
   const isFailed = bookmark.status === "failed";
 
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: bookmark.id,
+      data: { bookmark },
+    });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
+    : undefined;
+
   return (
-    <article className="kip-card kip-card-hover group relative overflow-hidden">
+    <article
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "kip-card kip-card-hover group relative overflow-hidden",
+        isDragging && "z-50 opacity-50 shadow-kip-hover"
+      )}
+    >
+      {/* Drag handle */}
+      <button
+        {...listeners}
+        {...attributes}
+        className="absolute left-2 top-2 z-10 cursor-grab rounded-kip-sm bg-white/90 p-1 text-navy/40 opacity-0 shadow-kip-card backdrop-blur-sm transition-opacity hover:text-navy active:cursor-grabbing group-hover:opacity-100"
+        aria-label="Drag to move"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+
       {/* Thumbnail area */}
       <div className="relative aspect-video w-full bg-gradient-to-br from-brand-50 to-brand-100">
         {bookmark.thumbnail_url ? (

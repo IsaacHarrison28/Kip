@@ -7,6 +7,7 @@ export type BookmarkStatus = "pending" | "ready" | "failed";
 export interface Bookmark {
   id: string;
   user_id: string;
+  folder_id: string | null;
   url: string;
   url_hash: string;
   title: string | null;
@@ -20,6 +21,18 @@ export interface Bookmark {
   updated_at: string;
 }
 
+export interface Folder {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  icon: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+  count?: number;
+}
+
 export interface ApiError {
   error: string;
 }
@@ -30,7 +43,10 @@ async function getAuthHeader(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
   const authHeaders = await getAuthHeader();
 
   const res = await fetch(`${API_URL}${path}`, {
@@ -58,17 +74,51 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  listBookmarks: () =>
-    request<{ bookmarks: Bookmark[] }>("/api/bookmarks").then(
-      (r) => r.bookmarks
-    ),
+  // Bookmarks
+  listBookmarks: (folderId?: string | "none") => {
+    const qs =
+      folderId === undefined
+        ? ""
+        : `?folder=${folderId === "none" ? "none" : folderId}`;
+    return request<{ bookmarks: Bookmark[] }>(`/api/bookmarks${qs}`).then(
+      (r) => r.bookmarks,
+    );
+  },
 
-  createBookmark: (url: string) =>
+  createBookmark: (url: string, folderId?: string | null) =>
     request<{ bookmark: Bookmark }>("/api/bookmarks", {
       method: "POST",
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, folder_id: folderId ?? null }),
+    }).then((r) => r.bookmark),
+
+  moveBookmark: (id: string, folderId: string | null) =>
+    request<{ bookmark: Bookmark }>(`/api/bookmarks/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ folder_id: folderId }),
     }).then((r) => r.bookmark),
 
   deleteBookmark: (id: string) =>
     request<void>(`/api/bookmarks/${id}`, { method: "DELETE" }),
+
+  // Folders
+  listFolders: () =>
+    request<{ folders: Folder[]; inboxCount: number }>("/api/folders"),
+
+  createFolder: (name: string, icon?: string, color?: string) =>
+    request<{ folder: Folder }>("/api/folders", {
+      method: "POST",
+      body: JSON.stringify({ name, icon, color }),
+    }).then((r) => r.folder),
+
+  updateFolder: (
+    id: string,
+    updates: Partial<Pick<Folder, "name" | "icon" | "color" | "position">>,
+  ) =>
+    request<{ folder: Folder }>(`/api/folders/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    }).then((r) => r.folder),
+
+  deleteFolder: (id: string) =>
+    request<void>(`/api/folders/${id}`, { method: "DELETE" }),
 };

@@ -1,43 +1,230 @@
-import { Inbox, Bookmark, Clock } from "lucide-react";
-
-const folders = [
-  { icon: Inbox, label: "Inbox", count: 0, active: true },
-  { icon: Clock, label: "Read Later", count: 0 },
-  { icon: Bookmark, label: "All Bookmarks", count: 0 },
-];
+import { useState, useRef, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  Plus,
+  Inbox as InboxIcon,
+  Trash2,
+  Pencil,
+  Check,
+  X,
+} from "lucide-react";
+import { useDroppable } from "@dnd-kit/core";
+import { useFolders } from "@/lib/folders-context";
+import { getFolderIcon } from "@/lib/folder-icons";
+import { cn } from "@/lib/utils";
+import type { Folder } from "@/lib/api";
 
 export function Sidebar() {
+  const { folders, inboxCount, createFolder, updateFolder, deleteFolder } =
+    useFolders();
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  async function handleCreate() {
+    const name = newName.trim();
+    if (!name) {
+      setCreating(false);
+      setNewName("");
+      return;
+    }
+    try {
+      await createFolder(name);
+      setNewName("");
+      setCreating(false);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to create folder");
+    }
+  }
+
   return (
     <aside className="hidden w-64 shrink-0 border-r border-navy/10 bg-white px-4 py-6 md:flex md:flex-col">
       <div className="space-y-1">
-        <p className="kip-label mb-3 px-3">Folders</p>
-        {folders.map((f) => {
-          const Icon = f.icon;
-          return (
-            <button
-              key={f.label}
-              className={`flex w-full items-center justify-between rounded-kip-sm px-3 py-2 text-sm font-medium transition-colors ${
-                f.active
-                  ? "bg-brand-50 text-electric-700"
-                  : "text-navy/70 hover:bg-brand-50 hover:text-navy"
-              }`}
-            >
-              <span className="flex items-center gap-2.5">
-                <Icon className="h-4 w-4" />
-                {f.label}
-              </span>
-              <span className="text-xs text-navy/40">{f.count}</span>
-            </button>
-          );
-        })}
-      </div>
+        <div className="mb-3 flex items-center justify-between px-3">
+          <p className="kip-label">Folders</p>
+          <button
+            onClick={() => setCreating(true)}
+            className="rounded-kip-sm p-1 text-navy/40 hover:bg-brand-50 hover:text-electric"
+            aria-label="New folder"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
 
-      <div className="mt-8 space-y-1">
-        <p className="kip-label mb-3 px-3">Tags</p>
-        <p className="px-3 py-2 text-xs text-navy/40">
-          No tags yet. Add tags to organize across folders.
-        </p>
+        {/* Inbox (special — bookmarks with folder_id = null) */}
+        <FolderRow
+          id="inbox"
+          to="/"
+          name="Inbox"
+          icon="inbox"
+          color="#0b6bf2"
+          count={inboxCount}
+          droppableId="inbox"
+          deletable={false}
+        />
+
+        {/* Custom folders */}
+        {folders
+          .filter((f) => f.name !== "Inbox")
+          .map((folder) => (
+            <FolderRow
+              key={folder.id}
+              id={folder.id}
+              to={`/folder/${folder.id}`}
+              name={folder.name}
+              icon={folder.icon}
+              color={folder.color}
+              count={folder.count ?? 0}
+              droppableId={folder.id}
+              deletable
+              onRename={(name) => updateFolder(folder.id, { name })}
+              onDelete={() => {
+                if (
+                  confirm(`Delete "${folder.name}"? Bookmarks move to Inbox.`)
+                ) {
+                  deleteFolder(folder.id);
+                }
+              }}
+            />
+          ))}
+
+        {/* New folder input */}
+        {creating && (
+          <div className="flex items-center gap-1.5 px-3 py-2">
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleCreate();
+                if (e.key === "Escape") {
+                  setCreating(false);
+                  setNewName("");
+                }
+              }}
+              onBlur={handleCreate}
+              placeholder="Folder name"
+              className="min-w-0 flex-1 rounded-kip-sm border border-navy/10 bg-white px-2 py-1 text-sm focus:border-electric focus:outline-none"
+            />
+          </div>
+        )}
       </div>
     </aside>
+  );
+}
+
+function FolderRow({
+  id,
+  to,
+  name,
+  icon,
+  count,
+  droppableId,
+  deletable,
+  onRename,
+  onDelete,
+}: {
+  id: string;
+  to: string;
+  name: string;
+  icon: string;
+  color: string;
+  count: number;
+  droppableId: string;
+  deletable: boolean;
+  onRename?: (name: string) => void;
+  onDelete?: () => void;
+}) {
+  const Icon = getFolderIcon(icon);
+  const { isOver, setNodeRef } = useDroppable({ id: droppableId });
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  function commitRename() {
+    const next = draft.trim();
+    if (next && next !== name) onRename?.(next);
+    else setDraft(name);
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2 rounded-kip-sm bg-brand-50 px-3 py-2">
+        <Icon className="h-4 w-4 shrink-0 text-electric" />
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitRename();
+            if (e.key === "Escape") {
+              setDraft(name);
+              setEditing(false);
+            }
+          }}
+          onBlur={commitRename}
+          className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium text-navy focus:outline-none"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <NavLink
+      to={to}
+      ref={setNodeRef}
+      className={({ isActive }) =>
+        cn(
+          "group flex w-full items-center justify-between rounded-kip-sm px-3 py-2 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-brand-50 text-electric-700"
+            : "text-navy/70 hover:bg-brand-50 hover:text-navy",
+          isOver && "ring-2 ring-electric ring-offset-1"
+        )
+      }
+    >
+      <span className="flex min-w-0 items-center gap-2.5">
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="truncate">{name}</span>
+      </span>
+
+      <span className="flex items-center gap-1">
+        <span className="text-xs text-navy/40 group-hover:hidden">{count}</span>
+        {deletable && (
+          <span className="hidden items-center gap-0.5 group-hover:flex">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setEditing(true);
+              }}
+              className="rounded p-1 text-navy/40 hover:text-electric"
+              aria-label="Rename folder"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete?.();
+              }}
+              className="rounded p-1 text-navy/40 hover:text-danger"
+              aria-label="Delete folder"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </span>
+        )}
+      </span>
+    </NavLink>
   );
 }
