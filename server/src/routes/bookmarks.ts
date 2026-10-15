@@ -12,11 +12,14 @@ bookmarksRouter.use(requireAuth);
  * GET /api/bookmarks
  */
 bookmarksRouter.get("/", async (req, res) => {
-  const { folder } = req.query as { folder?: string };
+  const { folder, tag } = req.query as {
+    folder?: string;
+    tag?: string;
+  };
 
   let query = supabase
     .from("bookmarks")
-    .select("*")
+    .select("*, bookmark_tags(tags(id, name))")
     .eq("user_id", req.userId)
     .order("created_at", { ascending: false });
 
@@ -33,7 +36,25 @@ bookmarksRouter.get("/", async (req, res) => {
     return res.status(500).json({ error: "Failed to fetch bookmarks" });
   }
 
-  return res.json({ bookmarks: data });
+  // Flatten tags
+  let bookmarks = (data ?? []).map((b) => {
+    const { bookmark_tags, ...rest } = b as typeof b & {
+      bookmark_tags?: Array<{ tags: { id: string; name: string } | null }>;
+    };
+    const tags = (bookmark_tags ?? [])
+      .map((bt: any) => bt.tags)
+      .filter((t: any): t is { id: string; name: string } => !!t);
+    return { ...rest, tags };
+  });
+
+  // Filter by tag (post-query — the tag relationship is many-to-many)
+  if (typeof tag === "string" && tag.length > 0) {
+    bookmarks = bookmarks.filter((b) =>
+      b.tags.some((t: any) => t.id === tag || t.name === tag),
+    );
+  }
+
+  return res.json({ bookmarks });
 });
 
 /**
@@ -113,7 +134,7 @@ bookmarksRouter.post("/", async (req, res) => {
     console.error("Failed to enqueue scrape job:", e);
   }
 
-  return res.status(201).json({ bookmark: data });
+  return res.status(201).json({ bookmark: { ...data, tags: [] } });
 });
 
 /**
@@ -159,7 +180,7 @@ bookmarksRouter.patch("/:id", async (req, res) => {
     return res.status(404).json({ error: "Bookmark not found" });
   }
 
-  return res.json({ bookmark: data });
+  return res.json({ bookmark: { ...data, tags: [] } });
 });
 
 /**

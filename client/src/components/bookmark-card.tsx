@@ -1,5 +1,6 @@
 import { Bookmark as BookmarkIcon, Trash2, GripVertical } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
+import { TagInput } from "./tag-input";
 import type { Bookmark } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -14,9 +15,14 @@ function hostname(url: string): string {
 export function BookmarkCard({
   bookmark,
   onDelete,
+  onTagsChange,
 }: {
   bookmark: Bookmark;
   onDelete: (id: string) => void;
+  onTagsChange: (
+    bookmarkId: string,
+    tags: Array<{ id: string; name: string }>
+  ) => void;
 }) {
   const isPending = bookmark.status === "pending";
   const isFailed = bookmark.status === "failed";
@@ -32,7 +38,7 @@ export function BookmarkCard({
     : undefined;
 
   function openLink() {
-    if (isDragging) return; // don't open if we just finished a drag
+    if (isDragging) return;
     window.open(bookmark.url, "_blank", "noopener,noreferrer");
   }
 
@@ -55,7 +61,6 @@ export function BookmarkCard({
         isDragging && "z-50 opacity-50 shadow-kip-hover"
       )}
     >
-      {/* Drag handle */}
       <button
         {...listeners}
         {...attributes}
@@ -66,7 +71,6 @@ export function BookmarkCard({
         <GripVertical className="h-3.5 w-3.5" />
       </button>
 
-      {/* Thumbnail area */}
       <div className="relative aspect-video w-full bg-gradient-to-br from-brand-50 to-brand-100">
         {bookmark.thumbnail_url ? (
           <img
@@ -105,7 +109,6 @@ export function BookmarkCard({
         )}
       </div>
 
-      {/* Content */}
       <div className="p-4">
         <div className="mb-2 flex items-center gap-2 text-xs text-navy/50">
           {bookmark.favicon_url && (
@@ -138,9 +141,25 @@ export function BookmarkCard({
             Couldn't fetch details.
           </p>
         )}
+
+        {/* Tags */}
+        <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+          <TagInput
+            bookmarkId={bookmark.id}
+            currentTags={bookmark.tags ?? []}
+            onTagAdded={(tag) =>
+              onTagsChange(bookmark.id, [...(bookmark.tags ?? []), tag])
+            }
+            onTagRemoved={(tagId) =>
+              onTagsChange(
+                bookmark.id,
+                (bookmark.tags ?? []).filter((t) => t.id !== tagId)
+              )
+            }
+          />
+        </div>
       </div>
 
-      {/* Delete button */}
       <button
         onClick={(e) => {
           e.stopPropagation();

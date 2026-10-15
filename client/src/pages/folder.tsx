@@ -35,7 +35,7 @@ export function FolderPage() {
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const data = await api.listBookmarks(id);
+      const data = await api.listBookmarks({ folderId: id });
       setBookmarks(data);
     } catch (e) {
       console.error(e);
@@ -90,6 +90,15 @@ export function FolderPage() {
     });
   }, []);
 
+  function handleTagsChange(
+    bookmarkId: string,
+    newTags: Array<{ id: string; name: string }>
+  ) {
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === bookmarkId ? { ...b, tags: newTags } : b))
+    );
+  }
+
   const { onDragEnd } = useDndMove(bookmarks, removeFromView, restoreToView);
 
   if (!folder && !loading) {
@@ -137,6 +146,7 @@ export function FolderPage() {
                       key={b.id}
                       bookmark={b}
                       onDelete={handleDelete}
+                      onTagsChange={handleTagsChange}
                     />
                   ))}
                 </div>

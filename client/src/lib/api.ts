@@ -19,6 +19,7 @@ export interface Bookmark {
   status: BookmarkStatus;
   created_at: string;
   updated_at: string;
+  tags: Array<{ id: string; name: string }>;
 }
 
 export interface Folder {
@@ -37,16 +38,21 @@ export interface ApiError {
   error: string;
 }
 
+export interface Tag {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+  count?: number;
+}
+
 async function getAuthHeader(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const authHeaders = await getAuthHeader();
 
   const res = await fetch(`${API_URL}${path}`, {
@@ -75,14 +81,15 @@ async function request<T>(
 
 export const api = {
   // Bookmarks
-  listBookmarks: (folderId?: string | "none") => {
-    const qs =
-      folderId === undefined
-        ? ""
-        : `?folder=${folderId === "none" ? "none" : folderId}`;
-    return request<{ bookmarks: Bookmark[] }>(`/api/bookmarks${qs}`).then(
-      (r) => r.bookmarks,
-    );
+  listBookmarks: (opts?: { folderId?: string | "none"; tagId?: string }) => {
+    const params = new URLSearchParams();
+    if (opts?.folderId === "none") params.set("folder", "none");
+    else if (opts?.folderId) params.set("folder", opts.folderId);
+    if (opts?.tagId) params.set("tag", opts.tagId);
+    const qs = params.toString();
+    return request<{ bookmarks: Bookmark[] }>(
+      `/api/bookmarks${qs ? `?${qs}` : ""}`
+    ).then((r) => r.bookmarks);
   },
 
   createBookmark: (url: string, folderId?: string | null) =>
@@ -112,7 +119,7 @@ export const api = {
 
   updateFolder: (
     id: string,
-    updates: Partial<Pick<Folder, "name" | "icon" | "color" | "position">>,
+    updates: Partial<Pick<Folder, "name" | "icon" | "color" | "position">>
   ) =>
     request<{ folder: Folder }>(`/api/folders/${id}`, {
       method: "PATCH",
@@ -121,4 +128,36 @@ export const api = {
 
   deleteFolder: (id: string) =>
     request<void>(`/api/folders/${id}`, { method: "DELETE" }),
+
+  // Tags
+  listTags: () => request<{ tags: Tag[] }>("/api/tags").then((r) => r.tags),
+
+  createTag: (name: string) =>
+    request<{ tag: Tag }>("/api/tags", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }).then((r) => r.tag),
+
+  updateTag: (id: string, name: string) =>
+    request<{ tag: Tag }>(`/api/tags/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    }).then((r) => r.tag),
+
+  deleteTag: (id: string) =>
+    request<void>(`/api/tags/${id}`, { method: "DELETE" }),
+
+  attachTag: (bookmarkId: string, name: string) =>
+    request<{ tag: { id: string; name: string } }>(
+      `/api/bookmarks/${bookmarkId}/tags`,
+      {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      }
+    ).then((r) => r.tag),
+
+  detachTag: (bookmarkId: string, tagId: string) =>
+    request<void>(`/api/bookmarks/${bookmarkId}/tags/${tagId}`, {
+      method: "DELETE",
+    }),
 };

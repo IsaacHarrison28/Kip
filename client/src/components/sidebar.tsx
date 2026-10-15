@@ -1,21 +1,25 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, Tag as TagIcon } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import { useFolders } from "@/lib/folders-context";
+import { useTags } from "@/lib/tags-context";
 import { useToast } from "@/lib/toast-context";
 import { getFolderIcon } from "@/lib/folder-icons";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { cn } from "@/lib/utils";
-import type { Folder } from "@/lib/api";
+import type { Folder, Tag } from "@/lib/api";
 
 export function Sidebar() {
   const { folders, inboxCount, createFolder, updateFolder, deleteFolder } =
     useFolders();
+  const { tags, updateTag, deleteTag } = useTags();
   const { push } = useToast();
+
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [pendingDelete, setPendingDelete] = useState<Folder | null>(null);
+  const [pendingTagDelete, setPendingTagDelete] = useState<Tag | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   async function handleCreate() {
@@ -52,6 +56,23 @@ export function Sidebar() {
     }
   }
 
+  async function confirmTagDelete() {
+    if (!pendingTagDelete) return;
+    setDeleting(true);
+    try {
+      await deleteTag(pendingTagDelete.id);
+      push(
+        `Tag "${pendingTagDelete.name}" removed from all bookmarks.`,
+        "info"
+      );
+      setPendingTagDelete(null);
+    } catch (e) {
+      push(e instanceof Error ? e.message : "Failed to delete tag", "error");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   async function handleRename(id: string, name: string) {
     try {
       await updateFolder(id, { name });
@@ -61,9 +82,19 @@ export function Sidebar() {
     }
   }
 
+  async function handleTagRename(id: string, name: string) {
+    try {
+      await updateTag(id, name);
+      push(`Tag renamed to "${name}".`, "success");
+    } catch (e) {
+      push(e instanceof Error ? e.message : "Failed to rename tag", "error");
+    }
+  }
+
   return (
     <>
-      <aside className="hidden w-64 shrink-0 border-r border-navy/10 bg-white px-4 py-6 md:flex md:flex-col">
+      <aside className="hidden w-64 shrink-0 flex-col overflow-y-auto border-r border-navy/10 bg-white px-4 py-6 md:flex">
+        {/* Folders */}
         <div className="space-y-1">
           <div className="mb-3 flex items-center justify-between px-3">
             <p className="kip-label">Folders</p>
@@ -121,8 +152,29 @@ export function Sidebar() {
             </div>
           )}
         </div>
+
+        {/* Tags */}
+        <div className="mt-8 space-y-1">
+          <p className="kip-label mb-3 px-3">Tags</p>
+
+          {tags.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-navy/40">
+              No tags yet. Add tags to organize across folders.
+            </p>
+          ) : (
+            tags.map((tag) => (
+              <TagRow
+                key={tag.id}
+                tag={tag}
+                onRename={(name) => handleTagRename(tag.id, name)}
+                onDelete={() => setPendingTagDelete(tag)}
+              />
+            ))
+          )}
+        </div>
       </aside>
 
+      {/* Delete folder confirmation */}
       <ConfirmModal
         open={pendingDelete !== null}
         title={
@@ -140,6 +192,28 @@ export function Sidebar() {
         loading={deleting}
         onConfirm={confirmDelete}
         onCancel={() => !deleting && setPendingDelete(null)}
+      />
+
+      {/* Delete tag confirmation */}
+      <ConfirmModal
+        open={pendingTagDelete !== null}
+        title={
+          pendingTagDelete
+            ? `Delete tag "${pendingTagDelete.name}"?`
+            : "Delete tag?"
+        }
+        description={
+          pendingTagDelete?.count
+            ? `This tag will be removed from ${pendingTagDelete.count} bookmark${
+                pendingTagDelete.count === 1 ? "" : "s"
+              }. The bookmarks themselves are not deleted.`
+            : "This tag will be removed from all bookmarks. The bookmarks themselves are not deleted."
+        }
+        confirmLabel="Delete tag"
+        variant="danger"
+        loading={deleting}
+        onConfirm={confirmTagDelete}
+        onCancel={() => !deleting && setPendingTagDelete(null)}
       />
     </>
   );
@@ -253,6 +327,105 @@ function FolderRow({
             </button>
           </span>
         )}
+      </span>
+    </NavLink>
+  );
+}
+
+function TagRow({
+  tag,
+  onRename,
+  onDelete,
+}: {
+  tag: Tag;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(tag.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  function commitRename() {
+    const next = draft.trim();
+    if (next && next !== tag.name) onRename(next);
+    else setDraft(tag.name);
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2 rounded-kip-sm bg-brand-50 px-3 py-2">
+        <TagIcon className="h-3.5 w-3.5 shrink-0 text-electric" />
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitRename();
+            if (e.key === "Escape") {
+              setDraft(tag.name);
+              setEditing(false);
+            }
+          }}
+          onBlur={commitRename}
+          className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium text-navy focus:outline-none"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <NavLink
+      to={`/tag/${tag.id}`}
+      className={({ isActive }) =>
+        cn(
+          "group flex w-full items-center justify-between rounded-kip-sm px-3 py-2 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-brand-50 text-electric-700"
+            : "text-navy/70 hover:bg-brand-50 hover:text-navy"
+        )
+      }
+    >
+      <span className="flex min-w-0 items-center gap-2.5">
+        <TagIcon className="h-3.5 w-3.5 shrink-0 text-navy/40" />
+        <span className="truncate">{tag.name}</span>
+      </span>
+
+      <span className="flex items-center gap-1">
+        <span className="text-xs text-navy/40 group-hover:hidden">
+          {tag.count ?? 0}
+        </span>
+        <span className="hidden items-center gap-0.5 group-hover:flex">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setEditing(true);
+            }}
+            className="rounded p-1 text-navy/40 hover:text-electric"
+            aria-label="Rename tag"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="rounded p-1 text-navy/40 hover:text-danger"
+            aria-label="Delete tag"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </span>
       </span>
     </NavLink>
   );

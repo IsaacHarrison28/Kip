@@ -28,7 +28,7 @@ export function InboxPage() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.listBookmarks("none");
+      const data = await api.listBookmarks({ folderId: "none" });
       setBookmarks(data);
     } catch (e) {
       console.error(e);
@@ -82,6 +82,15 @@ export function InboxPage() {
     });
   }, []);
 
+  function handleTagsChange(
+    bookmarkId: string,
+    newTags: Array<{ id: string; name: string }>
+  ) {
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === bookmarkId ? { ...b, tags: newTags } : b))
+    );
+  }
+
   const { onDragEnd } = useDndMove(bookmarks, removeFromView, restoreToView);
 
   return (
@@ -125,6 +134,7 @@ export function InboxPage() {
                       key={b.id}
                       bookmark={b}
                       onDelete={handleDelete}
+                      onTagsChange={handleTagsChange}
                     />
                   ))}
                 </div>
