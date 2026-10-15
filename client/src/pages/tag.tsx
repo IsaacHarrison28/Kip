@@ -13,13 +13,11 @@ import { BookmarkCard } from "@/components/bookmark-card";
 import { AddBookmarkModal } from "@/components/add-bookmark-modal";
 import { EmptyState } from "@/components/empty-state";
 import { api, type Bookmark } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
 import { useTags } from "@/lib/tags-context";
 import { useDndMove } from "@/lib/use-dnd-move";
 
 export function TagPage() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
   const { tags } = useTags();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
