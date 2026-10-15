@@ -5,7 +5,9 @@ import { useDroppable } from "@dnd-kit/core";
 import { useFolders } from "@/lib/folders-context";
 import { useToast } from "@/lib/toast-context";
 import { getFolderIcon } from "@/lib/folder-icons";
+import { ConfirmModal } from "@/components/confirm-modal";
 import { cn } from "@/lib/utils";
+import type { Folder } from "@/lib/api";
 
 export function Sidebar() {
   const { folders, inboxCount, createFolder, updateFolder, deleteFolder } =
@@ -13,6 +15,8 @@ export function Sidebar() {
   const { push } = useToast();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<Folder | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function handleCreate() {
     const name = newName.trim();
@@ -28,16 +32,23 @@ export function Sidebar() {
       setCreating(false);
     } catch (e) {
       push(e instanceof Error ? e.message : "Failed to create folder", "error");
-      // Keep input open so user can retry
     }
   }
 
-  async function handleDelete(id: string, name: string) {
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await deleteFolder(id);
-      push(`Folder "${name}" deleted. Bookmarks moved to Inbox.`, "info");
+      await deleteFolder(pendingDelete.id);
+      push(
+        `Folder "${pendingDelete.name}" deleted. Bookmarks moved to Inbox.`,
+        "info"
+      );
+      setPendingDelete(null);
     } catch (e) {
       push(e instanceof Error ? e.message : "Failed to delete folder", "error");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -51,65 +62,86 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-navy/10 bg-white px-4 py-6 md:flex md:flex-col">
-      <div className="space-y-1">
-        <div className="mb-3 flex items-center justify-between px-3">
-          <p className="kip-label">Folders</p>
-          <button
-            onClick={() => setCreating(true)}
-            className="rounded-kip-sm p-1 text-navy/40 hover:bg-brand-50 hover:text-electric"
-            aria-label="New folder"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
-        <FolderRow
-          to="/"
-          name="Inbox"
-          icon="inbox"
-          count={inboxCount}
-          droppableId="inbox"
-          deletable={false}
-        />
-
-        {folders
-          .filter((f) => f.name !== "Inbox")
-          .map((folder) => (
-            <FolderRow
-              key={folder.id}
-              to={`/folder/${folder.id}`}
-              name={folder.name}
-              icon={folder.icon}
-              count={folder.count ?? 0}
-              droppableId={folder.id}
-              deletable
-              onRename={(name) => handleRename(folder.id, name)}
-              onDelete={() => handleDelete(folder.id, folder.name)}
-            />
-          ))}
-
-        {creating && (
-          <div className="flex items-center gap-1.5 px-3 py-2">
-            <input
-              autoFocus
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreate();
-                if (e.key === "Escape") {
-                  setCreating(false);
-                  setNewName("");
-                }
-              }}
-              onBlur={handleCreate}
-              placeholder="Folder name"
-              className="min-w-0 flex-1 rounded-kip-sm border border-navy/10 bg-white px-2 py-1 text-sm focus:border-electric focus:outline-none"
-            />
+    <>
+      <aside className="hidden w-64 shrink-0 border-r border-navy/10 bg-white px-4 py-6 md:flex md:flex-col">
+        <div className="space-y-1">
+          <div className="mb-3 flex items-center justify-between px-3">
+            <p className="kip-label">Folders</p>
+            <button
+              onClick={() => setCreating(true)}
+              className="rounded-kip-sm p-1 text-navy/40 hover:bg-brand-50 hover:text-electric"
+              aria-label="New folder"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
           </div>
-        )}
-      </div>
-    </aside>
+
+          <FolderRow
+            to="/"
+            name="Inbox"
+            icon="inbox"
+            count={inboxCount}
+            droppableId="inbox"
+            deletable={false}
+          />
+
+          {folders
+            .filter((f) => f.name !== "Inbox")
+            .map((folder) => (
+              <FolderRow
+                key={folder.id}
+                to={`/folder/${folder.id}`}
+                name={folder.name}
+                icon={folder.icon}
+                count={folder.count ?? 0}
+                droppableId={folder.id}
+                deletable
+                onRename={(name) => handleRename(folder.id, name)}
+                onDelete={() => setPendingDelete(folder)}
+              />
+            ))}
+
+          {creating && (
+            <div className="flex items-center gap-1.5 px-3 py-2">
+              <input
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreate();
+                  if (e.key === "Escape") {
+                    setCreating(false);
+                    setNewName("");
+                  }
+                }}
+                onBlur={handleCreate}
+                placeholder="Folder name"
+                className="min-w-0 flex-1 rounded-kip-sm border border-navy/10 bg-white px-2 py-1 text-sm focus:border-electric focus:outline-none"
+              />
+            </div>
+          )}
+        </div>
+      </aside>
+
+      <ConfirmModal
+        open={pendingDelete !== null}
+        title={
+          pendingDelete ? `Delete "${pendingDelete.name}"?` : "Delete folder?"
+        }
+        description={
+          pendingDelete?.count
+            ? `${pendingDelete.count} bookmark${
+                pendingDelete.count === 1 ? "" : "s"
+              } will move to Inbox. This cannot be undone.`
+            : "This folder is empty. This cannot be undone."
+        }
+        confirmLabel="Delete folder"
+        variant="danger"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => !deleting && setPendingDelete(null)}
+      />
+    </>
   );
 }
 
@@ -126,7 +158,6 @@ function FolderRow({
   to: string;
   name: string;
   icon: string;
-  color?: string;
   count: number;
   droppableId: string;
   deletable: boolean;
