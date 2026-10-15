@@ -7,8 +7,10 @@ import { BookmarkCard } from "@/components/bookmark-card";
 import { AddBookmarkModal } from "@/components/add-bookmark-modal";
 import { api, type Bookmark } from "@/lib/api";
 import { subscribeToBookmarks } from "@/lib/realtime";
+import { useAuth } from "@/lib/auth-context";
 
 export function InboxPage() {
+  const { user } = useAuth();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,14 +30,16 @@ export function InboxPage() {
     load();
   }, [load]);
 
+  // Realtime — scoped to this user
   useEffect(() => {
-    const unsubscribe = subscribeToBookmarks((updated) => {
+    if (!user) return;
+    const unsubscribe = subscribeToBookmarks(user.id, (updated) => {
       setBookmarks((prev) =>
         prev.map((b) => (b.id === updated.id ? updated : b))
       );
     });
     return unsubscribe;
-  }, []);
+  }, [user]);
 
   async function handleDelete(id: string) {
     const prev = bookmarks;

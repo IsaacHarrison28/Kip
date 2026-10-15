@@ -1,9 +1,12 @@
+import { supabase } from "./supabase";
+
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
 export type BookmarkStatus = "pending" | "ready" | "failed";
 
 export interface Bookmark {
   id: string;
+  user_id: string;
   url: string;
   url_hash: string;
   title: string | null;
@@ -21,11 +24,20 @@ export interface ApiError {
   error: string;
 }
 
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const authHeaders = await getAuthHeader();
+
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders,
       ...options.headers,
     },
   });

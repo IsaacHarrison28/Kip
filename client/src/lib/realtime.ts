@@ -1,24 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "./supabase";
 import type { Bookmark } from "./api";
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!url || !anonKey) {
-  console.warn(
-    "[realtime] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY — realtime disabled"
-  );
-}
-
-export const supabaseRealtime =
-  url && anonKey ? createClient(url, anonKey) : null;
-
 export function subscribeToBookmarks(
+  userId: string,
   onChange: (bookmark: Bookmark) => void
 ): () => void {
-  if (!supabaseRealtime) return () => {};
-
-  const channel = supabaseRealtime
+  const channel = supabase
     .channel("bookmarks-changes")
     .on(
       "postgres_changes",
@@ -26,6 +13,7 @@ export function subscribeToBookmarks(
         event: "UPDATE",
         schema: "public",
         table: "bookmarks",
+        filter: `user_id=eq.${userId}`,
       },
       (payload) => {
         onChange(payload.new as Bookmark);
@@ -34,6 +22,6 @@ export function subscribeToBookmarks(
     .subscribe();
 
   return () => {
-    supabaseRealtime.removeChannel(channel);
+    supabase.removeChannel(channel);
   };
 }
