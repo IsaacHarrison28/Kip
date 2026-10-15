@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { bookmarksRouter } from "./routes/bookmarks.js";
+import { foldersRouter } from "./routes/folders.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -15,6 +16,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/bookmarks", bookmarksRouter);
+app.use("/api/folders", foldersRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
