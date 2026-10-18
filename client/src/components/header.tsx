@@ -1,8 +1,14 @@
-import { Settings, Plus, LogOut } from "lucide-react";
+import { Settings, Plus, LogOut, Search } from "lucide-react";
 import { KipLogo } from "./kip-logo";
 import { useAuth } from "@/lib/auth-context";
 
-export function Header({ onSaveClick }: { onSaveClick: () => void }) {
+export function Header({
+  onSaveClick,
+  onSearchClick,
+}: {
+  onSaveClick: () => void;
+  onSearchClick: () => void;
+}) {
   const { user, signOut } = useAuth();
 
   return (
@@ -11,6 +17,17 @@ export function Header({ onSaveClick }: { onSaveClick: () => void }) {
         <KipLogo />
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={onSearchClick}
+            className="flex items-center gap-2 rounded-kip-sm border border-navy/10 bg-white px-3 py-2 text-sm text-navy/60 transition-colors hover:border-navy/20 hover:text-navy sm:w-64"
+          >
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="hidden flex-1 text-left sm:inline">Search…</span>
+            <kbd className="hidden rounded border border-navy/10 bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-navy/50 sm:inline-block">
+              ⌘K
+            </kbd>
+          </button>
+
           <button onClick={onSaveClick} className="kip-btn-primary">
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Save link</span>

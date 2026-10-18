@@ -160,4 +160,21 @@ export const api = {
     request<void>(`/api/bookmarks/${bookmarkId}/tags/${tagId}`, {
       method: "DELETE",
     }),
+
+  search: (params: {
+    q: string;
+    folder?: string;
+    tag?: string;
+    platform?: string;
+  }) => {
+    const search = new URLSearchParams();
+    search.set("q", params.q);
+    if (params.folder) search.set("folder", params.folder);
+    if (params.tag) search.set("tag", params.tag);
+    if (params.platform) search.set("platform", params.platform);
+
+    return request<{ results: Bookmark[]; query: string }>(
+      `/api/search?${search.toString()}`
+    ).then((r) => r.results);
+  },
 };

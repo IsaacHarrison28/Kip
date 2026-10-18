@@ -16,7 +16,7 @@ import { api, type Bookmark } from "@/lib/api";
 import { useTags } from "@/lib/tags-context";
 import { useDndMove } from "@/lib/use-dnd-move";
 
-export function TagPage() {
+export function TagPage({ onSearchClick }: { onSearchClick: () => void }) {
   const { id } = useParams<{ id: string }>();
   const { tags } = useTags();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -90,7 +90,10 @@ export function TagPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header onSaveClick={() => setModalOpen(true)} />
+      <Header
+        onSaveClick={() => setModalOpen(true)}
+        onSearchClick={onSearchClick}
+      />
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <div className="flex flex-1">

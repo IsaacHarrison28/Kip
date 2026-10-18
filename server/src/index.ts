@@ -5,6 +5,7 @@ import { bookmarksRouter } from "./routes/bookmarks.js";
 import { foldersRouter } from "./routes/folders.js";
 import { tagsRouter } from "./routes/tags.js";
 import { bookmarkTagsRouter } from "./routes/bookmark-tags.js";
+import { searchRouter } from "./routes/search.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -21,6 +22,7 @@ app.use("/api/bookmarks", bookmarksRouter);
 app.use("/api/folders", foldersRouter);
 app.use("/api/tags", tagsRouter);
 app.use("/api/bookmarks/:bookmarkId/tags", bookmarkTagsRouter);
+app.use("/api/search", searchRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });

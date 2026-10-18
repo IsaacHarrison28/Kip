@@ -16,7 +16,7 @@ import { subscribeToBookmarks } from "@/lib/realtime";
 import { useAuth } from "@/lib/auth-context";
 import { useDndMove } from "@/lib/use-dnd-move";
 
-export function InboxPage() {
+export function InboxPage({ onSearchClick }: { onSearchClick: () => void }) {
   const { user } = useAuth();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,7 +106,10 @@ export function InboxPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header onSaveClick={() => setModalOpen(true)} />
+      <Header
+        onSaveClick={() => setModalOpen(true)}
+        onSearchClick={onSearchClick}
+      />
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <div className="flex flex-1">

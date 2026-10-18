@@ -18,7 +18,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useFolders } from "@/lib/folders-context";
 import { useDndMove } from "@/lib/use-dnd-move";
 
-export function FolderPage() {
+export function FolderPage({ onSearchClick }: { onSearchClick: () => void }) {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { folders } = useFolders();
@@ -118,7 +118,10 @@ export function FolderPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header onSaveClick={() => setModalOpen(true)} />
+      <Header
+        onSaveClick={() => setModalOpen(true)}
+        onSearchClick={onSearchClick}
+      />
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <div className="flex flex-1">
