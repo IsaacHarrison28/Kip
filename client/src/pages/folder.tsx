@@ -17,6 +17,8 @@ import { subscribeToBookmarks } from "@/lib/realtime";
 import { useAuth } from "@/lib/auth-context";
 import { useFolders } from "@/lib/folders-context";
 import { useDndMove } from "@/lib/use-dnd-move";
+import { PublishModal } from "@/components/publish-modal";
+import { Globe } from "lucide-react";
 
 export function FolderPage({ onSearchClick }: { onSearchClick: () => void }) {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +27,7 @@ export function FolderPage({ onSearchClick }: { onSearchClick: () => void }) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -139,7 +142,22 @@ export function FolderPage({ onSearchClick }: { onSearchClick: () => void }) {
                     {bookmarks.length === 1 ? "" : "s"}
                   </p>
                 </div>
-                <span className="kip-tag">{bookmarks.length} saved</span>
+
+                <div className="flex items-center gap-2">
+                  {folder?.is_public && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider text-success">
+                      <Globe className="h-3 w-3" />
+                      Public
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setPublishOpen(true)}
+                    className="kip-btn-secondary"
+                  >
+                    <Globe className="h-4 w-4" />
+                    {folder?.is_public ? "Share" : "Publish"}
+                  </button>
+                </div>
               </div>
 
               {loading ? (
@@ -176,6 +194,11 @@ export function FolderPage({ onSearchClick }: { onSearchClick: () => void }) {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSaved={load}
+      />
+      <PublishModal
+        open={publishOpen}
+        folder={folder ?? null}
+        onClose={() => setPublishOpen(false)}
       />
     </div>
   );

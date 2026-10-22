@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { supabase } from "../lib/supabase.js";
 import { requireAuth } from "../middleware/auth.js";
+import { uniqueSlug } from "../lib/slug.js";
 
 export const foldersRouter = Router();
 
@@ -228,6 +229,114 @@ foldersRouter.delete("/:id", async (req, res) => {
   if (error) {
     console.error(error);
     return res.status(500).json({ error: "Failed to delete folder" });
+  }
+
+  return res.status(204).send();
+});
+
+/**
+ * POST /api/folders/:id/publish
+ * Body: { slug?: string, description?: string }
+ * Publishes a folder. Generates a unique slug if not provided.
+ */
+foldersRouter.post("/:id/publish", async (req, res) => {
+  const { id } = req.params;
+  const { slug: customSlug, description } = req.body as {
+    slug?: string;
+    description?: string;
+  };
+
+  // Fetch folder, verify ownership
+  const { data: folder } = await supabase
+    .from("folders")
+    .select("id, name, slug, is_public")
+    .eq("id", id)
+    .eq("user_id", req.userId)
+    .maybeSingle();
+
+  if (!folder) {
+    return res.status(404).json({ error: "Folder not found" });
+  }
+
+  // If already published, just update
+  if (folder.is_public && folder.slug) {
+    const { data, error } = await supabase
+      .from("folders")
+      .update({
+        description: description ?? null,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Failed to update" });
+    }
+    return res.json({ folder: data });
+  }
+
+  // Generate slug if not provided
+  const desiredSlug = customSlug
+    ? customSlug
+    : await uniqueSlug(folder.name, async (s) => {
+        const { data } = await supabase
+          .from("folders")
+          .select("id")
+          .eq("slug", s)
+          .maybeSingle();
+        return !!data;
+      });
+
+  // If custom slug provided, validate uniqueness
+  if (customSlug) {
+    const { data: existing } = await supabase
+      .from("folders")
+      .select("id")
+      .eq("slug", customSlug)
+      .maybeSingle();
+
+    if (existing && existing.id !== id) {
+      return res.status(409).json({ error: "Slug already in use" });
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("folders")
+    .update({
+      is_public: true,
+      slug: desiredSlug,
+      description: description ?? null,
+    })
+    .eq("id", id)
+    .eq("user_id", req.userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to publish" });
+  }
+
+  return res.json({ folder: data });
+});
+
+/**
+ * DELETE /api/folders/:id/publish
+ * Unpublishes a folder.
+ */
+foldersRouter.delete("/:id/publish", async (req, res) => {
+  const { id } = req.params;
+
+  const { error } = await supabase
+    .from("folders")
+    .update({ is_public: false })
+    .eq("id", id)
+    .eq("user_id", req.userId);
+
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to unpublish" });
   }
 
   return res.status(204).send();

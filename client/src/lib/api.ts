@@ -32,6 +32,10 @@ export interface Folder {
   created_at: string;
   updated_at: string;
   count?: number;
+  is_public?: boolean;
+  slug?: string | null;
+  description?: string | null;
+  view_count?: number;
 }
 
 export interface ApiError {
@@ -44,6 +48,27 @@ export interface Tag {
   name: string;
   created_at: string;
   count?: number;
+}
+
+export interface PublicFolder {
+  id: string;
+  name: string;
+  description: string | null;
+  slug: string;
+  view_count: number;
+  created_at: string;
+}
+
+export interface PublicBookmark {
+  id: string;
+  url: string;
+  title: string | null;
+  description: string | null;
+  favicon_url: string | null;
+  thumbnail_url: string | null;
+  source_platform: string | null;
+  created_at: string;
+  tags: Array<{ id: string; name: string }>;
 }
 
 async function getAuthHeader(): Promise<Record<string, string>> {
@@ -177,4 +202,25 @@ export const api = {
       `/api/search?${search.toString()}`
     ).then((r) => r.results);
   },
+  // Public (no auth needed, but request() adds auth header — that's fine)
+  getPublicFolder: (slug: string) =>
+    request<{ folder: PublicFolder; bookmarks: PublicBookmark[] }>(
+      `/api/public/${slug}`
+    ),
+
+  incrementPublicView: (slug: string) =>
+    request<void>(`/api/public/${slug}/view`, { method: "POST" }),
+
+  // Publish / unpublish
+  publishFolder: (
+    id: string,
+    options?: { slug?: string; description?: string }
+  ) =>
+    request<{ folder: Folder }>(`/api/folders/${id}/publish`, {
+      method: "POST",
+      body: JSON.stringify(options ?? {}),
+    }).then((r) => r.folder),
+
+  unpublishFolder: (id: string) =>
+    request<void>(`/api/folders/${id}/publish`, { method: "DELETE" }),
 };

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { Plus, Trash2, Pencil, Tag as TagIcon } from "lucide-react";
+import { Plus, Trash2, Pencil, Tag as TagIcon, Globe } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import { useFolders } from "@/lib/folders-context";
 import { useTags } from "@/lib/tags-context";
@@ -129,6 +129,7 @@ export function Sidebar() {
                 deletable
                 onRename={(name) => handleRename(folder.id, name)}
                 onDelete={() => setPendingDelete(folder)}
+                isPublic={folder.is_public}
               />
             ))}
 
@@ -228,6 +229,7 @@ function FolderRow({
   deletable,
   onRename,
   onDelete,
+  isPublic,
 }: {
   to: string;
   name: string;
@@ -237,6 +239,7 @@ function FolderRow({
   deletable: boolean;
   onRename?: (name: string) => void;
   onDelete?: () => void;
+  isPublic?: boolean;
 }) {
   const Icon = getFolderIcon(icon);
   const { isOver, setNodeRef } = useDroppable({ id: droppableId });
@@ -297,6 +300,12 @@ function FolderRow({
       <span className="flex min-w-0 items-center gap-2.5">
         <Icon className="h-4 w-4 shrink-0" />
         <span className="truncate">{name}</span>
+        {isPublic && (
+          <Globe
+            className="h-3 w-3 shrink-0 text-electric/60"
+            aria-label="Public"
+          />
+        )}
       </span>
 
       <span className="flex items-center gap-1">

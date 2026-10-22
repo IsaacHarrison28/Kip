@@ -12,6 +12,7 @@ import { FolderPage } from "@/pages/folder";
 import { TagPage } from "@/pages/tag";
 import { LoginPage } from "@/pages/login";
 import { AuthCallbackPage } from "@/pages/auth-callback";
+import { PublicFolderPage } from "@/pages/public-folder";
 
 function AppShell() {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -33,6 +34,7 @@ function AppShell() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/c/:slug" element={<PublicFolderPage />} />
         <Route
           path="/"
           element={
