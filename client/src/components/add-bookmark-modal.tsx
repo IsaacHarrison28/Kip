@@ -14,6 +14,7 @@ export function AddBookmarkModal({
 }) {
   const { push } = useToast();
   const [url, setUrl] = useState("");
+  const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -21,6 +22,7 @@ export function AddBookmarkModal({
   useEffect(() => {
     if (open) {
       setUrl("");
+      setNote("");
       setError(null);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
@@ -42,7 +44,7 @@ export function AddBookmarkModal({
     setError(null);
 
     try {
-      await api.createBookmark(value);
+      await api.createBookmark(value, undefined, note.trim() || undefined);
       push("Link saved. Filing it under Inbox.", "success");
       onSaved();
       onClose();
@@ -77,7 +79,7 @@ export function AddBookmarkModal({
           </button>
         </div>
 
-        <div className="relative">
+        <div className="relative mb-3">
           <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-navy/40" />
           <input
             ref={inputRef}
@@ -89,6 +91,20 @@ export function AddBookmarkModal({
             }}
             placeholder="https://example.com"
             className="kip-input pl-10"
+            disabled={loading}
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="kip-label mb-1.5 block text-xs">
+            Note (optional)
+          </label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Why are you saving this? Add a personal thought..."
+            rows={2}
+            className="kip-input resize-none text-sm"
             disabled={loading}
           />
         </div>

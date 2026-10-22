@@ -1,9 +1,9 @@
-import { Bookmark as BookmarkIcon, Trash2, GripVertical } from "lucide-react";
+import { Trash2, GripVertical } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { TagInput } from "./tag-input";
+import { InlineNote } from "./inline-note";
 import type { Bookmark } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { getImageUrl } from "@/lib/image-utils";
 
 function hostname(url: string): string {
   try {
@@ -17,6 +17,7 @@ export function BookmarkCard({
   bookmark,
   onDelete,
   onTagsChange,
+  onNoteChange,
 }: {
   bookmark: Bookmark;
   onDelete: (id: string) => void;
@@ -24,18 +25,10 @@ export function BookmarkCard({
     bookmarkId: string,
     tags: Array<{ id: string; name: string }>
   ) => void;
+  onNoteChange: (bookmarkId: string, note: string) => void;
 }) {
   const isPending = bookmark.status === "pending";
   const isFailed = bookmark.status === "failed";
-
-  const safeThumbnailUrl = getImageUrl(
-    bookmark.thumbnail_url,
-    bookmark.source_platform
-  );
-  const safeFaviconUrl = getImageUrl(
-    bookmark.favicon_url,
-    bookmark.source_platform
-  );
 
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
@@ -81,32 +74,17 @@ export function BookmarkCard({
         <GripVertical className="h-3.5 w-3.5" />
       </button>
 
-      <div className="relative aspect-video w-full bg-gradient-to-br from-brand-50 to-brand-100">
-        {safeThumbnailUrl ? (
+      <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-br from-brand-50 to-brand-100">
+        {bookmark.thumbnail_url && (
           <img
-            src={safeThumbnailUrl}
+            src={bookmark.thumbnail_url}
             alt=""
-            className="h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
             loading="lazy"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
             }}
           />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            {safeFaviconUrl ? (
-              <img
-                src={safeFaviconUrl}
-                alt=""
-                className="h-8 w-8 rounded"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            ) : (
-              <BookmarkIcon className="h-8 w-8 text-electric/40" />
-            )}
-          </div>
         )}
 
         {isPending && (
@@ -121,8 +99,12 @@ export function BookmarkCard({
 
       <div className="p-4">
         <div className="mb-2 flex items-center gap-2 text-xs text-navy/50">
-          {safeFaviconUrl && (
-            <img src={safeFaviconUrl} alt="" className="h-4 w-4 rounded-sm" />
+          {bookmark.favicon_url && (
+            <img
+              src={bookmark.favicon_url}
+              alt=""
+              className="h-4 w-4 rounded-sm"
+            />
           )}
           <span className="truncate">{hostname(bookmark.url)}</span>
         </div>
@@ -135,6 +117,12 @@ export function BookmarkCard({
         >
           {bookmark.title || "Untitled"}
         </h3>
+
+        <InlineNote
+          bookmarkId={bookmark.id}
+          initialNote={bookmark.user_note || null}
+          onNoteUpdated={(note) => onNoteChange(bookmark.id, note)}
+        />
 
         {bookmark.description && (
           <p className="mt-1.5 line-clamp-2 text-xs text-navy/60">

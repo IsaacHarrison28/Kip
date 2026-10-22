@@ -129,6 +129,14 @@ export function FolderPage({ onSearchClick }: { onSearchClick: () => void }) {
     );
   }
 
+  function handleNoteChange(bookmarkId: string, note: string) {
+    setBookmarks((prev) =>
+      prev.map((b) =>
+        b.id === bookmarkId ? { ...b, user_note: note || null } : b
+      )
+    );
+  }
+
   const { onDragEnd } = useDndMove(bookmarks, removeFromView, restoreToView);
 
   if (!folder && !loading) {
@@ -195,6 +203,7 @@ export function FolderPage({ onSearchClick }: { onSearchClick: () => void }) {
                       bookmark={b}
                       onDelete={handleDelete}
                       onTagsChange={handleTagsChange}
+                      onNoteChange={handleNoteChange}
                     />
                   ))}
                 </div>

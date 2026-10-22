@@ -87,7 +87,7 @@ export function LoginPage() {
                 disabled={sending || !email.trim()}
                 className="kip-btn-primary mt-3 w-full"
               >
-                {sending ? "Sending…" : "Send magic link"}
+                {sending ? "Sending…" : "Send Link"}
               </button>
             </>
           )}

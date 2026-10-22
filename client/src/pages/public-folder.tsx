@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { Eye, Bookmark as BookmarkIcon } from "lucide-react";
 import { api, type PublicFolder, type PublicBookmark } from "@/lib/api";
 import { KipLogo } from "@/components/kip-logo";
-import { getImageUrl } from "@/lib/image-utils";
 import { KipLoader } from "@/components/kip-loader";
 
 function hostname(url: string): string {
@@ -15,15 +14,6 @@ function hostname(url: string): string {
 }
 
 function PublicCard({ bookmark }: { bookmark: PublicBookmark }) {
-  const safeThumbnailUrl = getImageUrl(
-    bookmark.thumbnail_url,
-    bookmark.source_platform
-  );
-  const safeFaviconUrl = getImageUrl(
-    bookmark.favicon_url,
-    bookmark.source_platform
-  );
-
   function openLink() {
     window.open(bookmark.url, "_blank", "noopener,noreferrer");
   }
@@ -43,9 +33,9 @@ function PublicCard({ bookmark }: { bookmark: PublicBookmark }) {
       className="kip-card kip-card-hover group cursor-pointer overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2"
     >
       <div className="relative aspect-video w-full bg-gradient-to-br from-brand-50 to-brand-100">
-        {safeThumbnailUrl ? (
+        {bookmark.thumbnail_url ? (
           <img
-            src={safeThumbnailUrl}
+            src={bookmark.thumbnail_url}
             alt=""
             className="h-full w-full object-cover"
             loading="lazy"
@@ -55,9 +45,9 @@ function PublicCard({ bookmark }: { bookmark: PublicBookmark }) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            {safeFaviconUrl ? (
+            {bookmark.favicon_url ? (
               <img
-                src={safeFaviconUrl}
+                src={bookmark.favicon_url}
                 alt=""
                 className="h-8 w-8 rounded"
                 onError={(e) => {
@@ -73,8 +63,12 @@ function PublicCard({ bookmark }: { bookmark: PublicBookmark }) {
 
       <div className="p-4">
         <div className="mb-2 flex items-center gap-2 text-xs text-navy/50">
-          {safeFaviconUrl && (
-            <img src={safeFaviconUrl} alt="" className="h-4 w-4 rounded-sm" />
+          {bookmark.favicon_url && (
+            <img
+              src={bookmark.favicon_url}
+              alt=""
+              className="h-4 w-4 rounded-sm"
+            />
           )}
           <span className="truncate">{hostname(bookmark.url)}</span>
         </div>
@@ -82,6 +76,12 @@ function PublicCard({ bookmark }: { bookmark: PublicBookmark }) {
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-navy">
           {bookmark.title || "Untitled"}
         </h3>
+
+        {bookmark.user_note && (
+          <div className="mt-2 rounded-kip-sm border border-electric/10 bg-brand-50/50 p-2 text-xs italic text-navy/80">
+            "{bookmark.user_note}"
+          </div>
+        )}
 
         {bookmark.description && (
           <p className="mt-1.5 line-clamp-2 text-xs text-navy/60">

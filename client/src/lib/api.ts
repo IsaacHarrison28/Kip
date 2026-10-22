@@ -20,6 +20,7 @@ export interface Bookmark {
   created_at: string;
   updated_at: string;
   tags: Array<{ id: string; name: string }>;
+  user_note: string | null;
 }
 
 export interface Folder {
@@ -64,6 +65,7 @@ export interface PublicBookmark {
   url: string;
   title: string | null;
   description: string | null;
+  user_note: string | null;
   favicon_url: string | null;
   thumbnail_url: string | null;
   source_platform: string | null;
@@ -117,10 +119,18 @@ export const api = {
     ).then((r) => r.bookmarks);
   },
 
-  createBookmark: (url: string, folderId?: string | null) =>
+  createBookmark: (
+    url: string,
+    folderId?: string | null,
+    userNote?: string | null
+  ) =>
     request<{ bookmark: Bookmark }>("/api/bookmarks", {
       method: "POST",
-      body: JSON.stringify({ url, folder_id: folderId ?? null }),
+      body: JSON.stringify({
+        url,
+        folder_id: folderId ?? null,
+        user_note: userNote ?? null,
+      }),
     }).then((r) => r.bookmark),
 
   moveBookmark: (id: string, folderId: string | null) =>
@@ -131,6 +141,15 @@ export const api = {
 
   deleteBookmark: (id: string) =>
     request<void>(`/api/bookmarks/${id}`, { method: "DELETE" }),
+
+  updateBookmark: (
+    id: string,
+    updates: { folder_id?: string | null; user_note?: string | null }
+  ) =>
+    request<{ bookmark: Bookmark }>(`/api/bookmarks/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    }).then((r) => r.bookmark),
 
   // Folders
   listFolders: () =>

@@ -61,9 +61,10 @@ bookmarksRouter.get("/", async (req, res) => {
  * POST /api/bookmarks
  */
 bookmarksRouter.post("/", async (req, res) => {
-  const { url, folder_id } = req.body as {
+  const { url, folder_id, user_note } = req.body as {
     url?: string;
     folder_id?: string | null;
+    user_note?: string;
   };
 
   if (!url || typeof url !== "string") {
@@ -116,6 +117,7 @@ bookmarksRouter.post("/", async (req, res) => {
       title: tempTitle,
       status: "pending",
       folder_id: finalFolderId,
+      user_note: user_note?.trim() || null,
     })
     .select()
     .single();
@@ -139,13 +141,16 @@ bookmarksRouter.post("/", async (req, res) => {
 
 /**
  * PATCH /api/bookmarks/:id
- * Move to folder, or update folder_id.
+ * Update folder_id or user_note.
  */
 bookmarksRouter.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const { folder_id } = req.body as { folder_id?: string | null };
+  const { folder_id, user_note } = req.body as {
+    folder_id?: string | null;
+    user_note?: string | null;
+  };
 
-  if (folder_id === undefined) {
+  if (folder_id === undefined && user_note === undefined) {
     return res.status(400).json({ error: "No fields to update" });
   }
 
@@ -163,9 +168,13 @@ bookmarksRouter.patch("/:id", async (req, res) => {
     }
   }
 
+  const updates: Record<string, unknown> = {};
+  if (folder_id !== undefined) updates.folder_id = folder_id;
+  if (user_note !== undefined) updates.user_note = user_note?.trim() || null;
+
   const { data, error } = await supabase
     .from("bookmarks")
-    .update({ folder_id })
+    .update(updates)
     .eq("id", id)
     .eq("user_id", req.userId)
     .select()
@@ -180,7 +189,7 @@ bookmarksRouter.patch("/:id", async (req, res) => {
     return res.status(404).json({ error: "Bookmark not found" });
   }
 
-  return res.json({ bookmark: { ...data, tags: [] } });
+  return res.json({ bookmark: data });
 });
 
 /**
