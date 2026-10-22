@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { KipLoader } from "@/components/kip-loader";
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -17,8 +18,8 @@ export function AuthCallbackPage() {
   }, [navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="h-2 w-2 animate-pulse rounded-full bg-electric" />
+    <div className="flex min-h-screen items-center justify-center bg-white">
+      <KipLoader />
     </div>
   );
 }

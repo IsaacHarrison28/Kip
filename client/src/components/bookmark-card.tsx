@@ -3,6 +3,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { TagInput } from "./tag-input";
 import type { Bookmark } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { getImageUrl } from "@/lib/image-utils";
 
 function hostname(url: string): string {
   try {
@@ -26,6 +27,15 @@ export function BookmarkCard({
 }) {
   const isPending = bookmark.status === "pending";
   const isFailed = bookmark.status === "failed";
+
+  const safeThumbnailUrl = getImageUrl(
+    bookmark.thumbnail_url,
+    bookmark.source_platform
+  );
+  const safeFaviconUrl = getImageUrl(
+    bookmark.favicon_url,
+    bookmark.source_platform
+  );
 
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
@@ -72,9 +82,9 @@ export function BookmarkCard({
       </button>
 
       <div className="relative aspect-video w-full bg-gradient-to-br from-brand-50 to-brand-100">
-        {bookmark.thumbnail_url ? (
+        {safeThumbnailUrl ? (
           <img
-            src={bookmark.thumbnail_url}
+            src={safeThumbnailUrl}
             alt=""
             className="h-full w-full object-cover"
             loading="lazy"
@@ -84,9 +94,9 @@ export function BookmarkCard({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            {bookmark.favicon_url ? (
+            {safeFaviconUrl ? (
               <img
-                src={bookmark.favicon_url}
+                src={safeFaviconUrl}
                 alt=""
                 className="h-8 w-8 rounded"
                 onError={(e) => {
@@ -111,12 +121,8 @@ export function BookmarkCard({
 
       <div className="p-4">
         <div className="mb-2 flex items-center gap-2 text-xs text-navy/50">
-          {bookmark.favicon_url && (
-            <img
-              src={bookmark.favicon_url}
-              alt=""
-              className="h-4 w-4 rounded-sm"
-            />
+          {safeFaviconUrl && (
+            <img src={safeFaviconUrl} alt="" className="h-4 w-4 rounded-sm" />
           )}
           <span className="truncate">{hostname(bookmark.url)}</span>
         </div>

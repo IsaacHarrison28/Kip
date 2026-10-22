@@ -7,6 +7,7 @@ import { tagsRouter } from "./routes/tags.js";
 import { bookmarkTagsRouter } from "./routes/bookmark-tags.js";
 import { searchRouter } from "./routes/search.js";
 import { publicRouter } from "./routes/public.js";
+import { proxyRouter } from "./routes/proxy.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -25,6 +26,7 @@ app.use("/api/tags", tagsRouter);
 app.use("/api/bookmarks/:bookmarkId/tags", bookmarkTagsRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/public", publicRouter);
+app.use("/api/proxy-image", proxyRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
