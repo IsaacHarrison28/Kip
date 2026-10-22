@@ -35,9 +35,13 @@ async function safeFetch(
       signal: controller.signal,
       redirect: "follow",
       headers: {
+        // Full browser UA — most sites serve rich metadata to these
         "User-Agent":
-          "Mozilla/5.0 (compatible; KipBot/1.0; +https://getkip.app/bot)",
-        Accept: "text/html,application/xhtml+xml",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
       },
     });
 
@@ -50,7 +54,6 @@ async function safeFetch(
       throw new Error(`Unsupported content type: ${contentType}`);
     }
 
-    // Read the body with a size cap
     const reader = res.body?.getReader();
     if (!reader) throw new Error("No response body");
 

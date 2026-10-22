@@ -3,12 +3,21 @@ import { genericExtractor } from "./generic.js";
 import { youtubeExtractor } from "./youtube.js";
 import { redditExtractor } from "./reddit.js";
 import { githubExtractor } from "./github.js";
+import { twitterExtractor } from "./twitter.js";
+import { facebookExtractor } from "./facebook.js";
+import { tiktokExtractor } from "./tiktok.js";
+import { linkedinExtractor } from "./linkedin.js";
 
+// Order matters! More specific extractors first, generic last.
 const extractors: Extractor[] = [
   youtubeExtractor,
-  redditExtractor,
   githubExtractor,
-  genericExtractor, // always last — the catch-all
+  redditExtractor,
+  twitterExtractor,
+  facebookExtractor,
+  tiktokExtractor,
+  linkedinExtractor,
+  genericExtractor,
 ];
 
 export async function extractMetadata(url: string): Promise<ExtractedMetadata> {
