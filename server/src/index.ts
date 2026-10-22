@@ -9,6 +9,7 @@ import { searchRouter } from "./routes/search.js";
 import { publicRouter } from "./routes/public.js";
 import { proxyRouter } from "./routes/proxy.js";
 import { startWorker } from "./worker.js";
+import { supabase } from "./lib/supabase.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -17,7 +18,11 @@ const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
 app.use(cors({ origin: CLIENT_ORIGIN }));
 app.use(express.json({ limit: "1mb" }));
 
-app.get("/health", (_req, res) => {
+app.get("/health", async (_req, res) => {
+  const { error } = await supabase.from("bookmarks").select("id").limit(1);
+  if (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
   res.json({ ok: true, service: "kip-api" });
 });
 
@@ -33,7 +38,7 @@ app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`[kip-api] listening on http://localhost:${PORT}`);
   startWorker();
 });
