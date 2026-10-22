@@ -70,6 +70,22 @@ export function InboxPage({ onSearchClick }: { onSearchClick: () => void }) {
     return unsubscribe;
   }, [user]);
 
+  useEffect(() => {
+    const hasPending = bookmarks.some((b) => b.status === "pending");
+    if (!hasPending) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await api.listBookmarks({ folderId: "none" });
+        setBookmarks(data);
+      } catch (e) {
+        console.error(e);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [bookmarks]);
+
   async function handleDelete(id: string) {
     const prev = bookmarks;
     setBookmarks((b) => b.filter((x) => x.id !== id));

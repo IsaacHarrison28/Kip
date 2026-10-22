@@ -8,6 +8,7 @@ import { bookmarkTagsRouter } from "./routes/bookmark-tags.js";
 import { searchRouter } from "./routes/search.js";
 import { publicRouter } from "./routes/public.js";
 import { proxyRouter } from "./routes/proxy.js";
+import { startWorker } from "./worker.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
@@ -34,4 +35,5 @@ app.use((_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[kip-api] listening on http://localhost:${PORT}`);
+  startWorker();
 });

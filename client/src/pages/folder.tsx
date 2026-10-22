@@ -81,6 +81,22 @@ export function FolderPage({ onSearchClick }: { onSearchClick: () => void }) {
     return unsubscribe;
   }, [user, id]);
 
+  useEffect(() => {
+    const hasPending = bookmarks.some((b) => b.status === "pending");
+    if (!hasPending) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await api.listBookmarks({ folderId: id });
+        setBookmarks(data);
+      } catch (e) {
+        console.error(e);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [bookmarks, id]);
+
   async function handleDelete(bookmarkId: string) {
     const prev = bookmarks;
     setBookmarks((b) => b.filter((x) => x.id !== bookmarkId));
