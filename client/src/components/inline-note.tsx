@@ -65,6 +65,7 @@ export function InlineNote({
             e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
           }}
           onKeyDown={(e) => {
+            e.stopPropagation();
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               handleSave();
