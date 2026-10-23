@@ -5,6 +5,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { FolderInput } from "lucide-react";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
 import { EmptyState } from "@/components/empty-state";
@@ -187,8 +188,15 @@ export function InboxPage({
                     Inbox
                   </h1>
                   <p className="mt-1 text-sm text-navy/60">
-                    Unsorted saves land here. Drag them into a folder to
-                    organize.
+                    <span className="hidden md:inline">
+                      Unsorted saves land here. Drag them into a folder to
+                      organize.
+                    </span>
+                    <span className="md:hidden">
+                      Unsorted saves land here. Tap the{" "}
+                      <FolderInput className="mb-0.5 inline h-3 w-3" /> icon on
+                      a card to move it to a folder.
+                    </span>
                   </p>
                 </div>
                 <span className="kip-tag">{bookmarks.length} saved</span>
