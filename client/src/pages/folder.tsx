@@ -20,7 +20,17 @@ import { useDndMove } from "@/lib/use-dnd-move";
 import { PublishModal } from "@/components/publish-modal";
 import { Globe } from "lucide-react";
 
-export function FolderPage({ onSearchClick }: { onSearchClick: () => void }) {
+export function FolderPage({
+  onSearchClick,
+  onMenuClick,
+  isSidebarOpen,
+  onSidebarClose,
+}: {
+  onSearchClick: () => void;
+  onMenuClick: () => void;
+  isSidebarOpen: boolean;
+  onSidebarClose: () => void;
+}) {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { folders } = useFolders();
@@ -148,11 +158,12 @@ export function FolderPage({ onSearchClick }: { onSearchClick: () => void }) {
       <Header
         onSaveClick={() => setModalOpen(true)}
         onSearchClick={onSearchClick}
+        onMenuClick={onMenuClick}
       />
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <div className="flex flex-1">
-          <Sidebar />
+          <Sidebar isOpen={isSidebarOpen} onClose={onSidebarClose} />
 
           <main className="flex-1">
             <div className="mx-auto max-w-5xl px-6 py-8">

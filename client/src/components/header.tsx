@@ -1,20 +1,33 @@
-import { Settings, Plus, LogOut, Search } from "lucide-react";
+import { Settings, Plus, LogOut, Search, Menu } from "lucide-react";
 import { KipLogo } from "./kip-logo";
 import { useAuth } from "@/lib/auth-context";
 
 export function Header({
   onSaveClick,
   onSearchClick,
+  onMenuClick,
 }: {
   onSaveClick: () => void;
   onSearchClick: () => void;
+  onMenuClick: () => void;
 }) {
   const { user, signOut } = useAuth();
 
   return (
     <header className="sticky top-0 z-30 border-b border-navy/10 bg-white/80 backdrop-blur-md">
-      <div className="flex h-16 items-center justify-between px-6">
-        <KipLogo />
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+        <div className="flex items-center gap-3">
+          {/* Mobile menu button - hidden on md and up */}
+          <button
+            onClick={onMenuClick}
+            className="rounded-kip-sm p-2 text-navy/60 hover:bg-brand-50 md:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          <KipLogo />
+        </div>
 
         <div className="flex items-center gap-2">
           <button

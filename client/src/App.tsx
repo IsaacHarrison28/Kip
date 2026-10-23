@@ -16,6 +16,7 @@ import { PublicFolderPage } from "@/pages/public-folder";
 
 function AppShell() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // <-- Add sidebar state
 
   // Global ⌘K / Ctrl+K
   useEffect(() => {
@@ -35,11 +36,17 @@ function AppShell() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/c/:slug" element={<PublicFolderPage />} />
+
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <InboxPageWithSearch onSearchClick={() => setSearchOpen(true)} />
+              <InboxPage
+                onSearchClick={() => setSearchOpen(true)}
+                onMenuClick={() => setSidebarOpen(true)}
+                isSidebarOpen={sidebarOpen}
+                onSidebarClose={() => setSidebarOpen(false)}
+              />
             </ProtectedRoute>
           }
         />
@@ -47,7 +54,12 @@ function AppShell() {
           path="/folder/:id"
           element={
             <ProtectedRoute>
-              <FolderPageWithSearch onSearchClick={() => setSearchOpen(true)} />
+              <FolderPage
+                onSearchClick={() => setSearchOpen(true)}
+                onMenuClick={() => setSidebarOpen(true)}
+                isSidebarOpen={sidebarOpen}
+                onSidebarClose={() => setSidebarOpen(false)}
+              />
             </ProtectedRoute>
           }
         />
@@ -55,7 +67,12 @@ function AppShell() {
           path="/tag/:id"
           element={
             <ProtectedRoute>
-              <TagPageWithSearch onSearchClick={() => setSearchOpen(true)} />
+              <TagPage
+                onSearchClick={() => setSearchOpen(true)}
+                onMenuClick={() => setSidebarOpen(true)}
+                isSidebarOpen={sidebarOpen}
+                onSidebarClose={() => setSidebarOpen(false)}
+              />
             </ProtectedRoute>
           }
         />
@@ -81,22 +98,4 @@ export default function App() {
       </ToastProvider>
     </BrowserRouter>
   );
-}
-
-// Wrapper pages that receive the search handler
-
-function InboxPageWithSearch({ onSearchClick }: { onSearchClick: () => void }) {
-  return <InboxPage onSearchClick={onSearchClick} />;
-}
-
-function FolderPageWithSearch({
-  onSearchClick,
-}: {
-  onSearchClick: () => void;
-}) {
-  return <FolderPage onSearchClick={onSearchClick} />;
-}
-
-function TagPageWithSearch({ onSearchClick }: { onSearchClick: () => void }) {
-  return <TagPage onSearchClick={onSearchClick} />;
 }

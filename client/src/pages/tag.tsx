@@ -16,7 +16,17 @@ import { api, type Bookmark } from "@/lib/api";
 import { useTags } from "@/lib/tags-context";
 import { useDndMove } from "@/lib/use-dnd-move";
 
-export function TagPage({ onSearchClick }: { onSearchClick: () => void }) {
+export function TagPage({
+  onSearchClick,
+  onMenuClick,
+  isSidebarOpen,
+  onSidebarClose,
+}: {
+  onSearchClick: () => void;
+  onMenuClick: () => void;
+  isSidebarOpen: boolean;
+  onSidebarClose: () => void;
+}) {
   const { id } = useParams<{ id: string }>();
   const { tags } = useTags();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -80,10 +90,16 @@ export function TagPage({ onSearchClick }: { onSearchClick: () => void }) {
     setBookmarks((prev) =>
       prev.map((b) => (b.id === bookmarkId ? { ...b, tags: newTags } : b))
     );
-    // If the current tag was removed, remove the bookmark from view
+
     if (!newTags.some((t) => t.id === id)) {
       setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkId));
     }
+  }
+
+  function handleNoteChange(bookmarkId: string, note: string) {
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === bookmarkId ? { ...b, note } : b))
+    );
   }
 
   const removeFromView = useCallback((bookmarkId: string) => {
@@ -109,11 +125,12 @@ export function TagPage({ onSearchClick }: { onSearchClick: () => void }) {
       <Header
         onSaveClick={() => setModalOpen(true)}
         onSearchClick={onSearchClick}
+        onMenuClick={onMenuClick}
       />
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <div className="flex flex-1">
-          <Sidebar />
+          <Sidebar isOpen={isSidebarOpen} onClose={onSidebarClose} />
 
           <main className="flex-1">
             <div className="mx-auto max-w-5xl px-6 py-8">
@@ -150,6 +167,7 @@ export function TagPage({ onSearchClick }: { onSearchClick: () => void }) {
                       bookmark={b}
                       onDelete={handleDelete}
                       onTagsChange={handleTagsChange}
+                      onNoteChange={handleNoteChange}
                     />
                   ))}
                 </div>

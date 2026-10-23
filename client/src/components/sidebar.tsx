@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { Plus, Trash2, Pencil, Tag as TagIcon, Globe } from "lucide-react";
+import { Plus, Trash2, Pencil, Tag as TagIcon, X } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import { useFolders } from "@/lib/folders-context";
 import { useTags } from "@/lib/tags-context";
@@ -10,7 +10,13 @@ import { ConfirmModal } from "@/components/confirm-modal";
 import { cn } from "@/lib/utils";
 import type { Folder, Tag } from "@/lib/api";
 
-export function Sidebar() {
+export function Sidebar({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
   const { folders, inboxCount, createFolder, updateFolder, deleteFolder } =
     useFolders();
   const { tags, updateTag, deleteTag } = useTags();
@@ -93,7 +99,32 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="hidden w-64 shrink-0 flex-col overflow-y-auto border-r border-navy/10 bg-white px-4 py-6 md:flex">
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-navy/30 backdrop-blur-sm md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar - Desktop: static, Mobile: fixed drawer */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col overflow-y-auto border-r border-navy/10 bg-white px-4 py-6 transition-transform duration-300 ease-in-out md:static md:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Mobile Close Button */}
+        <div className="mb-4 flex items-center justify-between md:hidden">
+          <span className="font-bold text-navy">Menu</span>
+          <button
+            onClick={onClose}
+            className="rounded-kip-sm p-1.5 text-navy/50 hover:bg-brand-50"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
         {/* Folders */}
         <div className="space-y-1">
           <div className="mb-3 flex items-center justify-between px-3">
@@ -114,6 +145,7 @@ export function Sidebar() {
             count={inboxCount}
             droppableId="inbox"
             deletable={false}
+            onClick={onClose}
           />
 
           {folders
@@ -129,7 +161,7 @@ export function Sidebar() {
                 deletable
                 onRename={(name) => handleRename(folder.id, name)}
                 onDelete={() => setPendingDelete(folder)}
-                isPublic={folder.is_public}
+                onClick={onClose}
               />
             ))}
 
@@ -169,13 +201,14 @@ export function Sidebar() {
                 tag={tag}
                 onRename={(name) => handleTagRename(tag.id, name)}
                 onDelete={() => setPendingTagDelete(tag)}
+                onClick={onClose}
               />
             ))
           )}
         </div>
       </aside>
 
-      {/* Delete folder confirmation */}
+      {/* Modals */}
       <ConfirmModal
         open={pendingDelete !== null}
         title={
@@ -183,9 +216,7 @@ export function Sidebar() {
         }
         description={
           pendingDelete?.count
-            ? `${pendingDelete.count} bookmark${
-                pendingDelete.count === 1 ? "" : "s"
-              } will move to Inbox. This cannot be undone.`
+            ? `${pendingDelete.count} bookmark${pendingDelete.count === 1 ? "" : "s"} will move to Inbox. This cannot be undone.`
             : "This folder is empty. This cannot be undone."
         }
         confirmLabel="Delete folder"
@@ -195,7 +226,6 @@ export function Sidebar() {
         onCancel={() => !deleting && setPendingDelete(null)}
       />
 
-      {/* Delete tag confirmation */}
       <ConfirmModal
         open={pendingTagDelete !== null}
         title={
@@ -205,9 +235,7 @@ export function Sidebar() {
         }
         description={
           pendingTagDelete?.count
-            ? `This tag will be removed from ${pendingTagDelete.count} bookmark${
-                pendingTagDelete.count === 1 ? "" : "s"
-              }. The bookmarks themselves are not deleted.`
+            ? `This tag will be removed from ${pendingTagDelete.count} bookmark${pendingTagDelete.count === 1 ? "" : "s"}. The bookmarks themselves are not deleted.`
             : "This tag will be removed from all bookmarks. The bookmarks themselves are not deleted."
         }
         confirmLabel="Delete tag"
@@ -229,7 +257,7 @@ function FolderRow({
   deletable,
   onRename,
   onDelete,
-  isPublic,
+  onClick,
 }: {
   to: string;
   name: string;
@@ -239,7 +267,7 @@ function FolderRow({
   deletable: boolean;
   onRename?: (name: string) => void;
   onDelete?: () => void;
-  isPublic?: boolean;
+  onClick?: () => void;
 }) {
   const Icon = getFolderIcon(icon);
   const { isOver, setNodeRef } = useDroppable({ id: droppableId });
@@ -287,6 +315,7 @@ function FolderRow({
     <NavLink
       to={to}
       ref={setNodeRef}
+      onClick={onClick}
       className={({ isActive }) =>
         cn(
           "group flex w-full items-center justify-between rounded-kip-sm px-3 py-2 text-sm font-medium transition-colors",
@@ -300,12 +329,6 @@ function FolderRow({
       <span className="flex min-w-0 items-center gap-2.5">
         <Icon className="h-4 w-4 shrink-0" />
         <span className="truncate">{name}</span>
-        {isPublic && (
-          <Globe
-            className="h-3 w-3 shrink-0 text-electric/60"
-            aria-label="Public"
-          />
-        )}
       </span>
 
       <span className="flex items-center gap-1">
@@ -345,10 +368,12 @@ function TagRow({
   tag,
   onRename,
   onDelete,
+  onClick,
 }: {
   tag: Tag;
   onRename: (name: string) => void;
   onDelete: () => void;
+  onClick?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(tag.name);
@@ -393,6 +418,7 @@ function TagRow({
   return (
     <NavLink
       to={`/tag/${tag.id}`}
+      onClick={onClick}
       className={({ isActive }) =>
         cn(
           "group flex w-full items-center justify-between rounded-kip-sm px-3 py-2 text-sm font-medium transition-colors",
