@@ -1,4 +1,4 @@
-import { Trash2, GripVertical } from "lucide-react";
+import { Trash2, GripVertical, FolderInput } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { TagInput } from "./tag-input";
 import { InlineNote } from "./inline-note";
@@ -18,6 +18,7 @@ export function BookmarkCard({
   onDelete,
   onTagsChange,
   onNoteChange,
+  onMoveClick,
 }: {
   bookmark: Bookmark;
   onDelete: (id: string) => void;
@@ -26,6 +27,7 @@ export function BookmarkCard({
     tags: Array<{ id: string; name: string }>
   ) => void;
   onNoteChange: (bookmarkId: string, note: string) => void;
+  onMoveClick: (bookmark: Bookmark) => void;
 }) {
   const isPending = bookmark.status === "pending";
   const isFailed = bookmark.status === "failed";
@@ -64,15 +66,31 @@ export function BookmarkCard({
         isDragging && "z-50 opacity-50 shadow-kip-hover"
       )}
     >
-      <button
-        {...listeners}
-        {...attributes}
-        onClick={(e) => e.stopPropagation()}
-        className="absolute left-2 top-2 z-10 cursor-grab rounded-kip-sm bg-white/90 p-1 text-navy/40 opacity-0 shadow-kip-card backdrop-blur-sm transition-opacity hover:text-navy active:cursor-grabbing group-hover:opacity-100"
-        aria-label="Drag to move"
-      >
-        <GripVertical className="h-3.5 w-3.5" />
-      </button>
+      {/* Action Buttons (Top Left) */}
+      <div className="absolute left-2 top-2 z-10 flex gap-1 opacity-0 shadow-kip-card transition-opacity group-hover:opacity-100">
+        {/* Drag Handle (Desktop Only) */}
+        <button
+          {...listeners}
+          {...attributes}
+          onClick={(e) => e.stopPropagation()}
+          className="hidden cursor-grab rounded-kip-sm bg-white/90 p-1 text-navy/40 backdrop-blur-sm hover:text-navy active:cursor-grabbing md:block"
+          aria-label="Drag to move"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Move to Folder Button (Mobile Only) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onMoveClick(bookmark);
+          }}
+          className="block rounded-kip-sm bg-white/90 p-1 text-navy/40 backdrop-blur-sm hover:text-navy md:hidden"
+          aria-label="Move to folder"
+        >
+          <FolderInput className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
       <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-br from-brand-50 to-brand-100">
         {bookmark.thumbnail_url && (
@@ -154,6 +172,7 @@ export function BookmarkCard({
         </div>
       </div>
 
+      {/* Delete Button (Top Right) */}
       <button
         onClick={(e) => {
           e.stopPropagation();

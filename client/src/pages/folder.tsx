@@ -12,6 +12,7 @@ import { Footer } from "@/components/footer";
 import { BookmarkCard } from "@/components/bookmark-card";
 import { AddBookmarkModal } from "@/components/add-bookmark-modal";
 import { EmptyState } from "@/components/empty-state";
+import { MoveModal } from "@/components/move-modal";
 import { api, type Bookmark } from "@/lib/api";
 import { subscribeToBookmarks } from "@/lib/realtime";
 import { useAuth } from "@/lib/auth-context";
@@ -33,11 +34,12 @@ export function FolderPage({
 }) {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { folders } = useFolders();
+  const { folders, incrementCount } = useFolders();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [movingBookmark, setMovingBookmark] = useState<Bookmark | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -147,6 +149,30 @@ export function FolderPage({
     );
   }
 
+  async function handleModalMove(folderId: string | null) {
+    if (!movingBookmark) return;
+    const bookmarkId = movingBookmark.id;
+    const prevFolderId = movingBookmark.folder_id;
+
+    setMovingBookmark(null);
+    if (folderId === prevFolderId) return;
+
+    const prevBookmarks = bookmarks;
+
+    setBookmarks((b) => b.filter((x) => x.id !== bookmarkId));
+    incrementCount(prevFolderId, -1);
+    incrementCount(folderId, +1);
+
+    try {
+      await api.moveBookmark(bookmarkId, folderId);
+    } catch (e) {
+      setBookmarks(prevBookmarks);
+      incrementCount(prevFolderId, +1);
+      incrementCount(folderId, -1);
+      console.error(e);
+    }
+  }
+
   const { onDragEnd } = useDndMove(bookmarks, removeFromView, restoreToView);
 
   if (!folder && !loading) {
@@ -215,6 +241,7 @@ export function FolderPage({
                       onDelete={handleDelete}
                       onTagsChange={handleTagsChange}
                       onNoteChange={handleNoteChange}
+                      onMoveClick={setMovingBookmark}
                     />
                   ))}
                 </div>
@@ -235,6 +262,11 @@ export function FolderPage({
         open={publishOpen}
         folder={folder ?? null}
         onClose={() => setPublishOpen(false)}
+      />
+      <MoveModal
+        bookmark={movingBookmark}
+        onClose={() => setMovingBookmark(null)}
+        onMove={handleModalMove}
       />
     </div>
   );

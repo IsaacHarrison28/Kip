@@ -12,9 +12,11 @@ import { Footer } from "@/components/footer";
 import { BookmarkCard } from "@/components/bookmark-card";
 import { AddBookmarkModal } from "@/components/add-bookmark-modal";
 import { EmptyState } from "@/components/empty-state";
+import { MoveModal } from "@/components/move-modal";
 import { api, type Bookmark } from "@/lib/api";
 import { useTags } from "@/lib/tags-context";
 import { useDndMove } from "@/lib/use-dnd-move";
+import { useFolders } from "@/lib/folders-context";
 
 export function TagPage({
   onSearchClick,
@@ -29,9 +31,11 @@ export function TagPage({
 }) {
   const { id } = useParams<{ id: string }>();
   const { tags } = useTags();
+  const { incrementCount } = useFolders();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [movingBookmark, setMovingBookmark] = useState<Bookmark | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -98,8 +102,38 @@ export function TagPage({
 
   function handleNoteChange(bookmarkId: string, note: string) {
     setBookmarks((prev) =>
-      prev.map((b) => (b.id === bookmarkId ? { ...b, note } : b))
+      prev.map((b) =>
+        b.id === bookmarkId ? { ...b, user_note: note || null } : b
+      )
     );
+  }
+
+  async function handleModalMove(folderId: string | null) {
+    if (!movingBookmark) return;
+    const bookmarkId = movingBookmark.id;
+    const prevFolderId = movingBookmark.folder_id;
+
+    setMovingBookmark(null);
+    if (folderId === prevFolderId) return;
+
+    const prevBookmarks = bookmarks;
+
+    // Optimistic count update
+    incrementCount(prevFolderId, -1);
+    incrementCount(folderId, +1);
+
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === bookmarkId ? { ...b, folder_id: folderId } : b))
+    );
+
+    try {
+      await api.moveBookmark(bookmarkId, folderId);
+    } catch (e) {
+      setBookmarks(prevBookmarks);
+      incrementCount(prevFolderId, +1);
+      incrementCount(folderId, -1);
+      console.error(e);
+    }
   }
 
   const removeFromView = useCallback((bookmarkId: string) => {
@@ -168,6 +202,7 @@ export function TagPage({
                       onDelete={handleDelete}
                       onTagsChange={handleTagsChange}
                       onNoteChange={handleNoteChange}
+                      onMoveClick={setMovingBookmark}
                     />
                   ))}
                 </div>
@@ -183,6 +218,11 @@ export function TagPage({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSaved={load}
+      />
+      <MoveModal
+        bookmark={movingBookmark}
+        onClose={() => setMovingBookmark(null)}
+        onMove={handleModalMove}
       />
     </div>
   );
