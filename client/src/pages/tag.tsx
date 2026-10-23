@@ -168,10 +168,10 @@ export function TagPage({
 
           <main className="flex-1">
             <div className="mx-auto max-w-5xl px-6 py-8">
-              <div className="mb-6 flex items-start justify-between gap-4">
+              <div className="mb-8 flex flex-col items-start justify-between gap-4 border-b border-navy/5 pb-5 sm:flex-row sm:items-end">
                 <div>
-                  <p className="kip-label">Tag</p>
-                  <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy">
+                  <p className="kip-label mb-1">Tag</p>
+                  <h1 className="text-2xl font-bold tracking-tight text-navy">
                     #{tag?.name ?? "tag"}
                   </h1>
                   <p className="mt-1 text-sm text-navy/60">
@@ -179,7 +179,17 @@ export function TagPage({
                     {bookmarks.length === 1 ? "" : "s"} across all folders
                   </p>
                 </div>
-                <span className="kip-tag">{bookmarks.length} saved</span>
+
+                {/* NEW COUNT DESIGN */}
+                <div className="flex items-center gap-2 rounded-full bg-brand-50/50 px-3 py-1.5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-electric" />
+                  <span className="text-xs font-medium text-navy/70">
+                    <strong className="font-bold text-electric">
+                      {bookmarks.length}
+                    </strong>{" "}
+                    tagged
+                  </span>
+                </div>
               </div>
 
               {loading ? (

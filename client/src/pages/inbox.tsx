@@ -182,7 +182,7 @@ export function InboxPage({
 
           <main className="flex-1">
             <div className="mx-auto max-w-5xl px-6 py-8">
-              <div className="mb-6 flex items-start justify-between gap-4">
+              <div className="mb-8 flex flex-col items-start justify-between gap-4 border-b border-navy/5 pb-5 sm:flex-row sm:items-end">
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight text-navy">
                     Inbox
@@ -195,11 +195,20 @@ export function InboxPage({
                     <span className="md:hidden">
                       Unsorted saves land here. Tap the{" "}
                       <FolderInput className="mb-0.5 inline h-3 w-3" /> icon on
-                      a card to move it to a folder.
+                      a card to move it.
                     </span>
                   </p>
                 </div>
-                <span className="kip-tag">{bookmarks.length} saved</span>
+
+                <div className="flex items-center gap-2 rounded-full bg-brand-50/50 px-3 py-1.5">
+                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-electric" />
+                  <span className="text-xs font-medium text-navy/70">
+                    <strong className="font-bold text-electric">
+                      {bookmarks.length}
+                    </strong>{" "}
+                    saved
+                  </span>
+                </div>
               </div>
 
               {loading ? (

@@ -19,7 +19,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useFolders } from "@/lib/folders-context";
 import { useDndMove } from "@/lib/use-dnd-move";
 import { PublishModal } from "@/components/publish-modal";
-import { Globe } from "lucide-react";
+import { Globe, FolderInput } from "lucide-react";
 
 export function FolderPage({
   onSearchClick,
@@ -193,18 +193,23 @@ export function FolderPage({
 
           <main className="flex-1">
             <div className="mx-auto max-w-5xl px-6 py-8">
-              <div className="mb-6 flex items-start justify-between gap-4">
+              <div className="mb-8 flex flex-col items-start justify-between gap-4 border-b border-navy/5 pb-5 sm:flex-row sm:items-end">
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight text-navy">
                     {folder?.name ?? "Folder"}
                   </h1>
                   <p className="mt-1 text-sm text-navy/60">
-                    {bookmarks.length} bookmark
-                    {bookmarks.length === 1 ? "" : "s"}
+                    <span className="hidden md:inline">
+                      Drag cards here or from Inbox to organize this folder.
+                    </span>
+                    <span className="md:hidden">
+                      Tap the <FolderInput className="mb-0.5 inline h-3 w-3" />{" "}
+                      icon on a card to move it.
+                    </span>
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {folder?.is_public && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider text-success">
                       <Globe className="h-3 w-3" />
@@ -213,14 +218,24 @@ export function FolderPage({
                   )}
                   <button
                     onClick={() => setPublishOpen(true)}
-                    className="kip-btn-secondary"
+                    className="kip-btn-secondary h-8 text-xs"
                   >
-                    <Globe className="h-4 w-4" />
+                    <Globe className="h-3.5 w-3.5" />
                     {folder?.is_public ? "Share" : "Publish"}
                   </button>
+
+                  {/* NEW COUNT DESIGN */}
+                  <div className="flex items-center gap-2 rounded-full bg-brand-50/50 px-3 py-1.5">
+                    <div className="h-1.5 w-1.5 rounded-full bg-electric" />
+                    <span className="text-xs font-medium text-navy/70">
+                      <strong className="font-bold text-electric">
+                        {bookmarks.length}
+                      </strong>{" "}
+                      saved
+                    </span>
+                  </div>
                 </div>
               </div>
-
               {loading ? (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {Array.from({ length: 3 }).map((_, i) => (
